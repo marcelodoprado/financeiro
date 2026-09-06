@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Financeiro Cloud</title>
-    <!-- Tags PWA -->
     <meta name="theme-color" content="#111827">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -38,26 +37,47 @@
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen">
 
-<!-- TELA DE LOGIN (Sobrepõe tudo até logar) -->
+<!-- TELA DE LOGIN ATUALIZADA -->
 <div id="tela-login" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50 transition-opacity duration-300">
     <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-sm border border-gray-700">
-        <h2 class="text-2xl font-bold text-white text-center mb-6">Acesso Seguro</h2>
+        <h2 id="titulo-login" class="text-2xl font-bold text-white text-center mb-6">Acesso Seguro</h2>
+        
         <input type="email" id="email-login" placeholder="E-mail" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
-        <input type="password" id="senha-login" placeholder="Senha" class="w-full mb-6 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
-        <button id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded transition-colors mb-4">Entrar no Sistema</button>
-        <p id="msg-erro" class="text-red-400 text-sm text-center hidden">Credenciais inválidas.</p>
+        <input type="password" id="senha-login" placeholder="Senha" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
+        
+        <!-- Botão Principal (Entrar ou Registrar) -->
+        <button id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded transition-colors mb-4 shadow-lg">Entrar no Sistema</button>
+        
+        <p id="msg-erro" class="text-red-400 text-sm text-center hidden mb-4">Ocorreu um erro. Tente novamente.</p>
+        
+        <!-- Botão Alternar Modo -->
+        <div class="text-center mb-6">
+            <button id="btn-alternar-registro" class="text-gray-400 hover:text-white text-sm transition-colors underline decoration-gray-600 underline-offset-4">Não tem conta? Registre-se</button>
+        </div>
+
+        <div class="flex items-center justify-center gap-4 mb-6">
+            <div class="h-px bg-gray-700 w-full"></div>
+            <span class="text-gray-500 text-sm">OU</span>
+            <div class="h-px bg-gray-700 w-full"></div>
+        </div>
+
+        <!-- Botão Google -->
+        <button id="btn-google" class="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 px-4 rounded transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Entrar com Google
+        </button>
     </div>
 </div>
 
-<!-- APLICATIVO PRINCIPAL (Oculto até logar) -->
+<!-- APLICATIVO PRINCIPAL -->
 <div id="app-principal" class="max-w-5xl mx-auto p-4 md:p-8 hidden">
     
     <header class="mb-6 flex flex-col md:flex-row justify-between items-center border-b border-gray-800 pb-4 gap-4 print:border-none print:pb-0">
         <div class="flex items-center gap-4 w-full md:w-auto justify-between">
-            <h1 class="text-2xl font-bold text-white tracking-wide">
-                FINANÇAS <span id="titulo-impressao" class="hidden text-lg font-normal ml-2"></span>
-            </h1>
-            <!-- Botão de Sair adicionado -->
+            <div>
+                <h1 class="text-2xl font-bold text-white tracking-wide">FINANÇAS <span id="titulo-impressao" class="hidden text-lg font-normal ml-2"></span></h1>
+                <p id="usuario-logado" class="text-xs text-blue-400 print-ocultar"></p>
+            </div>
             <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
         </div>
         
@@ -117,15 +137,15 @@
 </div>
 
 <!-- ========================================== -->
-<!-- JAVASCRIPT: LÓGICA E CONEXÃO COM O FIREBASE -->
+<!-- JAVASCRIPT: FIREBASE E MULTIUSUÁRIO -->
 <!-- ========================================== -->
 <script type="module">
-    // Importando módulos modernos do Firebase
+    // Importando Módulos (Adicionado GoogleAuthProvider e Funções de Criação/Login)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // COLE AS SUAS CHAVES DO FIREBASE AQUI! (Substitua todo este bloco const firebaseConfig = {...})
+    // COLE AS SUAS CHAVES DO FIREBASE AQUI!
 const firebaseConfig = {
   apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
   authDomain: "financeiro-cd95f.firebaseapp.com",
@@ -135,67 +155,110 @@ const firebaseConfig = {
   appId: "1:14408523133:web:3d5c840411315dffcc8014"
 };
 
-    // Inicializando Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const colLancamentos = collection(db, "lancamentos");
+    
+    // Variáveis cruciais para Multiusuário
+    let colLancamentos = null; // A "pasta" do banco só é montada quando soubermos quem logou
+    let unsubscribeSnapshot = null; // Para parar de ouvir o banco ao deslogar
 
-    // Variáveis Globais
     let bancoDeDados = [];
     let idEditando = null;
     let confeteJaDisparadoMeseAno = ""; 
     
-    // =====================================
-    // 1. SISTEMA DE LOGIN E AUTENTICAÇÃO
-    // =====================================
     const telaLogin = document.getElementById('tela-login');
     const appPrincipal = document.getElementById('app-principal');
+    const msgErro = document.getElementById('msg-erro');
     
-    // Vigia se você está logado ou não
+    // =====================================
+    // 1. SISTEMA DE LOGIN, REGISTRO E GOOGLE
+    // =====================================
+    
+    // Controle de Modo (Login ou Cadastro)
+    let modoRegistro = false;
+    document.getElementById('btn-alternar-registro').addEventListener('click', () => {
+        modoRegistro = !modoRegistro;
+        if(modoRegistro) {
+            document.getElementById('titulo-login').innerText = "Criar Nova Conta";
+            document.getElementById('btn-entrar').innerText = "Registrar-se";
+            document.getElementById('btn-alternar-registro').innerText = "Já tem uma conta? Entre";
+        } else {
+            document.getElementById('titulo-login').innerText = "Acesso Seguro";
+            document.getElementById('btn-entrar').innerText = "Entrar no Sistema";
+            document.getElementById('btn-alternar-registro').innerText = "Não tem conta? Registre-se";
+        }
+    });
+
+    // Vigia de Autenticação (A mágica do Multiusuário acontece aqui)
     onAuthStateChanged(auth, (user) => {
         if (user) {
             telaLogin.classList.add('hidden');
             appPrincipal.classList.remove('hidden');
+            
+            // Exibe quem está logado
+            document.getElementById('usuario-logado').innerText = `Logado como: ${user.email}`;
+            
+            // CADEADO MULTIUSUÁRIO: Define o caminho exclusivo deste usuário no banco!
+            colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
+            
             configurarFiltrosIniciais(); 
-            iniciarEscutaDoBanco(); // Conecta a tabela à nuvem
+            iniciarEscutaDoBanco();
         } else {
             appPrincipal.classList.add('hidden');
             telaLogin.classList.remove('hidden');
+            if(unsubscribeSnapshot) unsubscribeSnapshot(); // Para de baixar dados da nuvem
+            bancoDeDados = []; // Limpa os dados da tela
         }
     });
 
-    // Ação do Botão Entrar
+    // Botão Principal (Ação de Login ou Cadastro por E-mail)
     document.getElementById('btn-entrar').addEventListener('click', () => {
         const email = document.getElementById('email-login').value;
         const senha = document.getElementById('senha-login').value;
-        signInWithEmailAndPassword(auth, email, senha)
-            .then(() => { document.getElementById('msg-erro').classList.add('hidden'); })
-            .catch(() => { document.getElementById('msg-erro').classList.remove('hidden'); });
+        
+        msgErro.classList.add('hidden');
+        
+        if (modoRegistro) {
+            createUserWithEmailAndPassword(auth, email, senha)
+                .catch((error) => mostrarErro(error.code));
+        } else {
+            signInWithEmailAndPassword(auth, email, senha)
+                .catch((error) => mostrarErro(error.code));
+        }
     });
 
-    // Ação do Botão Sair
-    document.getElementById('btn-sair').addEventListener('click', () => {
-        signOut(auth);
+    // Botão Google
+    const providerGoogle = new GoogleAuthProvider();
+    document.getElementById('btn-google').addEventListener('click', () => {
+        msgErro.classList.add('hidden');
+        signInWithPopup(auth, providerGoogle).catch((error) => mostrarErro(error.code));
     });
+
+    document.getElementById('btn-sair').addEventListener('click', () => { signOut(auth); });
+
+    function mostrarErro(codigo) {
+        msgErro.classList.remove('hidden');
+        if (codigo === 'auth/email-already-in-use') msgErro.innerText = "Este e-mail já está cadastrado.";
+        else if (codigo === 'auth/weak-password') msgErro.innerText = "A senha deve ter pelo menos 6 caracteres.";
+        else if (codigo === 'auth/invalid-credential') msgErro.innerText = "E-mail ou senha incorretos.";
+        else msgErro.innerText = "Ocorreu um erro. Tente novamente.";
+    }
 
     // =====================================
     // 2. CONEXÃO EM TEMPO REAL (FIREBASE)
     // =====================================
     function iniciarEscutaDoBanco() {
-        // onSnapshot vigia o banco. Qualquer mudança lá (celular ou PC) atualiza a tela aqui.
-        onSnapshot(colLancamentos, (snapshot) => {
+        if(unsubscribeSnapshot) unsubscribeSnapshot();
+        unsubscribeSnapshot = onSnapshot(colLancamentos, (snapshot) => {
             bancoDeDados = [];
-            snapshot.forEach((docRef) => {
-                // Montamos nosso array combinando o ID gerado pelo Firebase com os dados
-                bancoDeDados.push({ id: docRef.id, ...docRef.data() });
-            });
-            atualizarTela(); // Redesenha a tabela
+            snapshot.forEach((docRef) => { bancoDeDados.push({ id: docRef.id, ...docRef.data() }); });
+            atualizarTela();
         });
     }
 
     // =====================================
-    // 3. LÓGICA DO APLICATIVO (Adaptada para Nuvem)
+    // 3. LÓGICA DO APLICATIVO
     // =====================================
     const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
 
@@ -211,7 +274,6 @@ const firebaseConfig = {
         window.voltarMesAtual(); 
     }
 
-    // Exportando funções para o 'window' para que os botões HTML (onclick) consigam enxergá-las
     window.voltarMesAtual = function() {
         const hoje = new Date();
         document.getElementById('filtro-mes').value = String(hoje.getMonth() + 1).padStart(2, '0');
@@ -238,6 +300,8 @@ const firebaseConfig = {
     }
 
     window.salvarLancamento = async function() {
+        if(!colLancamentos) return; // Trava de segurança
+        
         const desc = document.getElementById('desc').value.trim();
         const tipo = document.getElementById('tipo').value;
         const status = document.getElementById('status').value;
@@ -248,7 +312,6 @@ const firebaseConfig = {
         if (!desc || isNaN(valor) || valor <= 0 || !data) { alert("Preencha todos os campos obrigatórios."); return; }
 
         if (idEditando === null) {
-            // CRIANDO NOVO (Salva direto na nuvem usando addDoc)
             let limiteLoop = 1;
             const dataBase = new Date(data + 'T12:00:00'); 
             
@@ -259,19 +322,16 @@ const firebaseConfig = {
                 const novaData = new Date(dataBase);
                 novaData.setMonth(novaData.getMonth() + i);
                 let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
-
-                // Envia para o Firestore
+                
                 await addDoc(colLancamentos, {
                     desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
                 });
             }
         } else {
-            // ATUALIZANDO (Edita documento específico na nuvem)
-            const docRef = doc(db, "lancamentos", idEditando);
+            const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
             await updateDoc(docRef, { desc, tipo, status, data, valor });
             window.cancelarEdicao();
         }
-        
         limparFormulario();
     };
 
@@ -297,18 +357,20 @@ const firebaseConfig = {
     };
 
     window.marcarConcluido = async function(id) {
+        if(!auth.currentUser) return;
         const lancamento = bancoDeDados.find(item => item.id === id);
         if (lancamento) {
             const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
-            const docRef = doc(db, "lancamentos", id);
-            await updateDoc(docRef, { status: novoStatus }); // Atualiza na nuvem
+            const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
+            await updateDoc(docRef, { status: novoStatus });
         }
     };
 
     window.deletar = async function(id) {
+        if (!auth.currentUser) return;
         if (confirm("Deseja excluir definitivamente da nuvem?")) {
-            const docRef = doc(db, "lancamentos", id);
-            await deleteDoc(docRef); // Deleta da nuvem
+            const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
+            await deleteDoc(docRef);
         }
     };
 
