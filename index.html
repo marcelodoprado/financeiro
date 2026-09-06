@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle Financeiro Profissional</title>
-    <!-- Tags para transformar em Aplicativo de Celular -->
+    <title>Controle Financeiro Cloud</title>
+    <!-- Tags PWA -->
     <meta name="theme-color" content="#111827">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <!-- Tailwind CSS -->
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Biblioteca de Confetes para a animação de sucesso -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -19,292 +18,226 @@
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
-
-        /* Animação suave para o banner de sucesso */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .animar-entrada { animation: fadeInDown 0.5s ease-out forwards; }
-
-        /* REGRAS DE IMPRESSÃO (PDF) */
+        
         @media print {
             body { background-color: white !important; color: black !important; }
             .print-ocultar { display: none !important; }
-            .text-white, .text-gray-400, .text-gray-200, .text-red-400 { color: black !important; }
+            .text-white, .text-gray-400, .text-gray-200 { color: black !important; }
             .bg-gray-800, .bg-gray-900 { background-color: white !important; border: none !important; }
             table { width: 100%; border-collapse: collapse; }
             th, td { border: 1px solid #d1d5db !important; padding: 8px !important; }
             th { background-color: #e5e7eb !important; font-weight: bold !important; color: black !important; }
-            
-            /* Zebrado forçado no PDF */
             tbody tr:nth-child(even) td { background-color: #f9fafb !important; }
             tbody tr:nth-child(odd) td { background-color: #ffffff !important; }
-            
             #titulo-impressao { display: inline !important; }
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
+<body class="bg-gray-900 text-gray-200 min-h-screen">
 
-<div class="max-w-5xl mx-auto">
+<!-- TELA DE LOGIN (Sobrepõe tudo até logar) -->
+<div id="tela-login" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50 transition-opacity duration-300">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-sm border border-gray-700">
+        <h2 class="text-2xl font-bold text-white text-center mb-6">Acesso Seguro</h2>
+        <input type="email" id="email-login" placeholder="E-mail" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
+        <input type="password" id="senha-login" placeholder="Senha" class="w-full mb-6 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
+        <button id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded transition-colors mb-4">Entrar no Sistema</button>
+        <p id="msg-erro" class="text-red-400 text-sm text-center hidden">Credenciais inválidas.</p>
+    </div>
+</div>
+
+<!-- APLICATIVO PRINCIPAL (Oculto até logar) -->
+<div id="app-principal" class="max-w-5xl mx-auto p-4 md:p-8 hidden">
     
-    <!-- Cabeçalho com Filtros e Botões -->
     <header class="mb-6 flex flex-col md:flex-row justify-between items-center border-b border-gray-800 pb-4 gap-4 print:border-none print:pb-0">
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto justify-between">
             <h1 class="text-2xl font-bold text-white tracking-wide">
-                CONTROLE FINANCEIRO 
-                <span id="titulo-impressao" class="hidden text-lg font-normal ml-2"></span>
+                FINANÇAS <span id="titulo-impressao" class="hidden text-lg font-normal ml-2"></span>
             </h1>
-            <!-- Botões de Backup discretos ao lado do título -->
-            <div class="flex gap-2 print-ocultar">
-                <button onclick="exportarDados()" class="text-[10px] uppercase tracking-wider font-bold bg-gray-800 hover:bg-gray-700 text-gray-400 border border-gray-700 px-2 py-1 rounded transition-colors" title="Baixar arquivo de segurança">Exportar</button>
-                <button onclick="document.getElementById('importFile').click()" class="text-[10px] uppercase tracking-wider font-bold bg-gray-800 hover:bg-gray-700 text-gray-400 border border-gray-700 px-2 py-1 rounded transition-colors" title="Restaurar de um arquivo">Importar</button>
-                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importarDados(event)">
-            </div>
+            <!-- Botão de Sair adicionado -->
+            <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
         </div>
         
         <div class="flex items-center gap-3 print-ocultar flex-wrap justify-center">
-            <!-- Botão Home (Ícone) -->
-            <button onclick="voltarMesAtual()" class="text-gray-400 hover:text-white transition-colors p-2 bg-gray-800 border border-gray-700 rounded" title="Ir para o mês atual">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <button onclick="voltarMesAtual()" class="text-gray-400 hover:text-white transition-colors p-2 bg-gray-800 border border-gray-700 rounded" title="Mês atual">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
             </button>
-
-            <select id="filtro-mes" onchange="atualizarTela()" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none text-sm font-medium">
-                <option value="01">Janeiro</option>
-                <option value="02">Fevereiro</option>
-                <option value="03">Março</option>
-                <option value="04">Abril</option>
-                <option value="05">Maio</option>
-                <option value="06">Junho</option>
-                <option value="07">Julho</option>
-                <option value="08">Agosto</option>
-                <option value="09">Setembro</option>
-                <option value="10">Outubro</option>
-                <option value="11">Novembro</option>
-                <option value="12">Dezembro</option>
+            <select id="filtro-mes" onchange="atualizarTela()" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:outline-none text-sm font-medium">
+                <option value="01">Janeiro</option> <option value="02">Fevereiro</option> <option value="03">Março</option> <option value="04">Abril</option>
+                <option value="05">Maio</option> <option value="06">Junho</option> <option value="07">Julho</option> <option value="08">Agosto</option>
+                <option value="09">Setembro</option> <option value="10">Outubro</option> <option value="11">Novembro</option> <option value="12">Dezembro</option>
             </select>
-            <select id="filtro-ano" onchange="atualizarTela()" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none text-sm font-medium">
-                <!-- Anos gerados pelo JavaScript -->
-            </select>
-            <button onclick="window.print()" class="bg-gray-200 hover:bg-white text-gray-900 font-bold py-2 px-4 rounded transition-colors text-sm">
-                Gerar PDF
-            </button>
+            <select id="filtro-ano" onchange="atualizarTela()" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:outline-none text-sm font-medium"></select>
+            <button onclick="window.print()" class="bg-gray-200 hover:bg-white text-gray-900 font-bold py-2 px-4 rounded text-sm">Gerar PDF</button>
         </div>
     </header>
 
-    <!-- Banner de Sucesso (Gamificação) -->
     <div id="painel-sucesso" class="hidden animar-entrada bg-green-900/40 border border-green-500 text-green-300 p-4 rounded-lg mb-8 text-center print-ocultar">
-        🎉 <strong>Mês Quitado!</strong> Excelente trabalho, você pagou todas as contas registradas para este mês!
+        🎉 <strong>Mês Quitado!</strong> Excelente trabalho, você pagou todas as contas registradas!
     </div>
 
     <!-- Dashboard -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 shadow-sm">
-            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">A Receber</h3>
-            <p id="dash-receber" class="text-xl font-semibold text-white">R$ 0,00</p>
-        </div>
-        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 shadow-sm">
-            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">A Pagar</h3>
-            <p id="dash-pagar" class="text-xl font-semibold text-white">R$ 0,00</p>
-        </div>
-        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 shadow-sm">
-            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Recebido</h3>
-            <p id="dash-recebido" class="text-xl font-semibold text-white">R$ 0,00</p>
-        </div>
-        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 shadow-sm">
-            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Saldo Mês</h3>
-            <p id="dash-saldo" class="text-xl font-semibold text-white">R$ 0,00</p>
-        </div>
+        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">A Receber</h3><p id="dash-receber" class="text-xl font-bold text-white">R$ 0,00</p></div>
+        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">A Pagar</h3><p id="dash-pagar" class="text-xl font-bold text-white">R$ 0,00</p></div>
+        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">Recebido</h3><p id="dash-recebido" class="text-xl font-bold text-white">R$ 0,00</p></div>
+        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">Saldo Mês</h3><p id="dash-saldo" class="text-xl font-bold text-white">R$ 0,00</p></div>
     </div>
 
-    <!-- Formulário (Oculto no PDF) -->
-    <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8 print-ocultar shadow-sm">
+    <!-- Formulário -->
+    <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8 print-ocultar">
         <h2 id="titulo-formulario" class="text-lg font-medium text-white mb-4">Novo Lançamento</h2>
-        
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-400 uppercase mb-1">Descrição</label>
-                <input type="text" id="desc" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none" placeholder="Ex: Internet...">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-400 uppercase mb-1">Tipo</label>
-                <select id="tipo" onchange="atualizarOpcoesStatus()" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none">
-                    <option value="Pagar">Saída (-)</option>
-                    <option value="Receber">Entrada (+)</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-400 uppercase mb-1">Status</label>
-                <select id="status" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none">
-                    <option value="Pendente">Pendente</option>
-                    <option value="Pago">Pago</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-400 uppercase mb-1">Data (Lançamento)</label>
-                <input type="date" id="data" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-400 uppercase mb-1">Valor (R$)</label>
-                <input type="number" id="valor" step="0.01" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none" placeholder="0.00">
-            </div>
-            
-            <!-- Controles de Repetição -->
-            <div id="box-repeticao">
-                <label class="block text-xs font-medium text-gray-400 uppercase mb-1">Repetição</label>
-                <select id="repeticao" onchange="mostrarOcultarParcelas()" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none">
-                    <option value="unico">Único (Não repetir)</option>
-                    <option value="mensal">Fixo (Até Dezembro)</option>
-                    <option value="parcelado">Parcelado</option>
-                </select>
-            </div>
-            <div id="box-parcelas" class="hidden">
-                <label class="block text-xs font-medium text-gray-400 uppercase mb-1">Qtd. Parcelas</label>
-                <input type="number" id="qtd_parcelas" min="2" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white focus:border-gray-500 focus:outline-none" placeholder="Ex: 10">
-            </div>
-            
-            <!-- Botões do Form -->
+            <div class="md:col-span-2"><label class="block text-xs text-gray-400 uppercase mb-1">Descrição</label><input type="text" id="desc" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
+            <div><label class="block text-xs text-gray-400 uppercase mb-1">Tipo</label><select id="tipo" onchange="atualizarOpcoesStatus()" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="Pagar">Saída (-)</option><option value="Receber">Entrada (+)</option></select></div>
+            <div><label class="block text-xs text-gray-400 uppercase mb-1">Status</label><select id="status" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="Pendente">Pendente</option><option value="Pago">Pago</option></select></div>
+            <div><label class="block text-xs text-gray-400 uppercase mb-1">Data</label><input type="date" id="data" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
+            <div><label class="block text-xs text-gray-400 uppercase mb-1">Valor (R$)</label><input type="number" id="valor" step="0.01" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
+            <div id="box-repeticao"><label class="block text-xs text-gray-400 uppercase mb-1">Repetição</label><select id="repeticao" onchange="mostrarOcultarParcelas()" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="unico">Único</option><option value="mensal">Fixo (Até Dez)</option><option value="parcelado">Parcelado</option></select></div>
+            <div id="box-parcelas" class="hidden"><label class="block text-xs text-gray-400 uppercase mb-1">Qtd. Parcelas</label><input type="number" id="qtd_parcelas" min="2" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
             <div class="md:col-span-4 flex justify-end gap-2 mt-2">
-                <button id="btn-cancelar-edicao" onclick="cancelarEdicao()" class="hidden bg-gray-700 text-white font-medium py-2 px-4 rounded hover:bg-gray-600 transition-colors">
-                    Cancelar
-                </button>
-                <button id="btn-salvar" onclick="salvarLancamento()" class="bg-gray-200 text-gray-900 font-semibold py-2 px-6 rounded hover:bg-white transition-colors">
-                    Salvar Lançamento
-                </button>
+                <button id="btn-cancelar-edicao" onclick="cancelarEdicao()" class="hidden bg-gray-700 text-white py-2 px-4 rounded">Cancelar</button>
+                <button id="btn-salvar" onclick="salvarLancamento()" class="bg-gray-200 text-gray-900 font-bold py-2 px-6 rounded">Salvar na Nuvem</button>
             </div>
         </div>
     </div>
 
-    <!-- Tabela de Lançamentos -->
-    <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto shadow-sm">
+    <!-- Tabela -->
+    <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto">
         <table class="w-full text-sm text-left">
             <thead class="text-xs text-gray-400 uppercase bg-gray-900 border-b border-gray-700">
-                <tr>
-                    <th class="px-4 py-3 font-medium">Data</th>
-                    <th class="px-4 py-3 font-medium">Descrição</th>
-                    <th class="px-4 py-3 font-medium">Tipo</th>
-                    <th class="px-4 py-3 font-medium">Valor</th>
-                    <th class="px-4 py-3 font-medium">Status</th>
-                    <th class="px-4 py-3 font-medium text-right print-ocultar">Ações</th>
-                </tr>
+                <tr><th class="px-4 py-3">Data</th><th class="px-4 py-3">Descrição</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3">Valor</th><th class="px-4 py-3">Status</th><th class="px-4 py-3 text-right print-ocultar">Ações</th></tr>
             </thead>
-            <tbody id="tabela-corpo" class="divide-y divide-gray-700">
-                <!-- Linhas injetadas pelo JavaScript -->
-            </tbody>
+            <tbody id="tabela-corpo" class="divide-y divide-gray-700"></tbody>
         </table>
     </div>
 </div>
 
-<script>
-    let bancoDeDados = JSON.parse(localStorage.getItem('ControleFinanceiroApp')) || [];
-    let idEditando = null;
-    let confeteJaDisparadoMeseAno = ""; // Memória para não disparar confete toda hora
-    
-    const nomeMeses = {
-        "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", 
-        "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", 
-        "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro"
-    };
+<!-- ========================================== -->
+<!-- JAVASCRIPT: LÓGICA E CONEXÃO COM O FIREBASE -->
+<!-- ========================================== -->
+<script type="module">
+    // Importando módulos modernos do Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // --- Configurações Iniciais ---
+    // COLE AS SUAS CHAVES DO FIREBASE AQUI! (Substitua todo este bloco const firebaseConfig = {...})
+const firebaseConfig = {
+  apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
+  authDomain: "financeiro-cd95f.firebaseapp.com",
+  projectId: "financeiro-cd95f",
+  storageBucket: "financeiro-cd95f.firebasestorage.app",
+  messagingSenderId: "14408523133",
+  appId: "1:14408523133:web:3d5c840411315dffcc8014"
+};
+
+    // Inicializando Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const colLancamentos = collection(db, "lancamentos");
+
+    // Variáveis Globais
+    let bancoDeDados = [];
+    let idEditando = null;
+    let confeteJaDisparadoMeseAno = ""; 
+    
+    // =====================================
+    // 1. SISTEMA DE LOGIN E AUTENTICAÇÃO
+    // =====================================
+    const telaLogin = document.getElementById('tela-login');
+    const appPrincipal = document.getElementById('app-principal');
+    
+    // Vigia se você está logado ou não
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            telaLogin.classList.add('hidden');
+            appPrincipal.classList.remove('hidden');
+            configurarFiltrosIniciais(); 
+            iniciarEscutaDoBanco(); // Conecta a tabela à nuvem
+        } else {
+            appPrincipal.classList.add('hidden');
+            telaLogin.classList.remove('hidden');
+        }
+    });
+
+    // Ação do Botão Entrar
+    document.getElementById('btn-entrar').addEventListener('click', () => {
+        const email = document.getElementById('email-login').value;
+        const senha = document.getElementById('senha-login').value;
+        signInWithEmailAndPassword(auth, email, senha)
+            .then(() => { document.getElementById('msg-erro').classList.add('hidden'); })
+            .catch(() => { document.getElementById('msg-erro').classList.remove('hidden'); });
+    });
+
+    // Ação do Botão Sair
+    document.getElementById('btn-sair').addEventListener('click', () => {
+        signOut(auth);
+    });
+
+    // =====================================
+    // 2. CONEXÃO EM TEMPO REAL (FIREBASE)
+    // =====================================
+    function iniciarEscutaDoBanco() {
+        // onSnapshot vigia o banco. Qualquer mudança lá (celular ou PC) atualiza a tela aqui.
+        onSnapshot(colLancamentos, (snapshot) => {
+            bancoDeDados = [];
+            snapshot.forEach((docRef) => {
+                // Montamos nosso array combinando o ID gerado pelo Firebase com os dados
+                bancoDeDados.push({ id: docRef.id, ...docRef.data() });
+            });
+            atualizarTela(); // Redesenha a tabela
+        });
+    }
+
+    // =====================================
+    // 3. LÓGICA DO APLICATIVO (Adaptada para Nuvem)
+    // =====================================
+    const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
+
     function configurarFiltrosIniciais() {
         const hoje = new Date();
         const anoAtual = hoje.getFullYear();
-        
         const selectAno = document.getElementById('filtro-ano');
         selectAno.innerHTML = '';
         for (let i = anoAtual - 1; i <= anoAtual + 4; i++) {
             const option = document.createElement('option');
-            option.value = i; option.text = i;
-            selectAno.appendChild(option);
+            option.value = i; option.text = i; selectAno.appendChild(option);
         }
-        voltarMesAtual(); 
+        window.voltarMesAtual(); 
     }
 
-    function voltarMesAtual() {
+    // Exportando funções para o 'window' para que os botões HTML (onclick) consigam enxergá-las
+    window.voltarMesAtual = function() {
         const hoje = new Date();
         document.getElementById('filtro-mes').value = String(hoje.getMonth() + 1).padStart(2, '0');
         document.getElementById('filtro-ano').value = hoje.getFullYear();
         document.getElementById('data').value = hoje.toISOString().split('T')[0];
-        atualizarTela();
-    }
+        window.atualizarTela();
+    };
 
-    // --- Lógica de Backup (Exportar / Importar) ---
-    function exportarDados() {
-        if (bancoDeDados.length === 0) {
-            alert("Não há dados para exportar.");
-            return;
-        }
-        // Converte o array para texto JSON
-        const dataStr = JSON.stringify(bancoDeDados, null, 2);
-        // Cria um "link" virtual para fazer o download
-        const blob = new Blob([dataStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        
-        const dataHoje = new Date().toISOString().split('T')[0];
-        link.href = url;
-        link.download = `backup_financas_${dataHoje}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function importarDados(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const dadosImportados = JSON.parse(e.target.result);
-                if (Array.isArray(dadosImportados)) {
-                    if(confirm("ATENÇÃO: Isso irá apagar os dados atuais da tela e substituí-r pelo backup. Deseja continuar?")) {
-                        bancoDeDados = dadosImportados;
-                        salvarNoNavegadorEAtualizar();
-                        alert("Backup restaurado com sucesso!");
-                    }
-                } else {
-                    alert("O arquivo não parece ser um backup válido.");
-                }
-            } catch (erro) {
-                alert("Erro ao ler o arquivo. Certifique-se de que é um arquivo JSON válido.");
-            }
-            // Limpa o input para permitir importar o mesmo arquivo novamente se necessário
-            document.getElementById('importFile').value = ''; 
-        };
-        reader.readAsText(file);
-    }
-
-    // --- Lógica do Formulário ---
-    function atualizarOpcoesStatus() {
+    window.atualizarOpcoesStatus = function() {
         const tipo = document.getElementById('tipo').value;
         const statusSelect = document.getElementById('status');
-        if (tipo === 'Receber') {
-            statusSelect.innerHTML = '<option value="Pendente">Pendente</option><option value="Recebido">Recebido</option>';
-        } else {
-            statusSelect.innerHTML = '<option value="Pendente">Pendente</option><option value="Pago">Pago</option>';
-        }
-    }
+        if (tipo === 'Receber') statusSelect.innerHTML = '<option value="Pendente">Pendente</option><option value="Recebido">Recebido</option>';
+        else statusSelect.innerHTML = '<option value="Pendente">Pendente</option><option value="Pago">Pago</option>';
+    };
 
-    function mostrarOcultarParcelas() {
+    window.mostrarOcultarParcelas = function() {
         const rep = document.getElementById('repeticao').value;
-        const boxParcelas = document.getElementById('box-parcelas');
-        if (rep === 'parcelado') boxParcelas.classList.remove('hidden');
-        else boxParcelas.classList.add('hidden');
-    }
+        if (rep === 'parcelado') document.getElementById('box-parcelas').classList.remove('hidden');
+        else document.getElementById('box-parcelas').classList.add('hidden');
+    };
 
     function formatarData(dataISO) {
-        if (!dataISO) return '-';
-        const partes = dataISO.split('-');
-        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        if (!dataISO) return '-'; const partes = dataISO.split('-'); return `${partes[2]}/${partes[1]}/${partes[0]}`;
     }
 
-    // --- Salvamento ---
-    function salvarLancamento() {
+    window.salvarLancamento = async function() {
         const desc = document.getElementById('desc').value.trim();
         const tipo = document.getElementById('tipo').value;
         const status = document.getElementById('status').value;
@@ -312,165 +245,113 @@
         const valor = parseFloat(document.getElementById('valor').value);
         const repeticao = document.getElementById('repeticao').value;
 
-        if (!desc || isNaN(valor) || valor <= 0 || !data) {
-            alert("Preencha todos os campos obrigatórios corretamente.");
-            return;
-        }
+        if (!desc || isNaN(valor) || valor <= 0 || !data) { alert("Preencha todos os campos obrigatórios."); return; }
 
         if (idEditando === null) {
+            // CRIANDO NOVO (Salva direto na nuvem usando addDoc)
             let limiteLoop = 1;
             const dataBase = new Date(data + 'T12:00:00'); 
             
-            if (repeticao === 'mensal') {
-                const mesInicial = dataBase.getMonth();
-                limiteLoop = 12 - mesInicial; 
-            }
-            if (repeticao === 'parcelado') {
-                limiteLoop = parseInt(document.getElementById('qtd_parcelas').value) || 1;
-            }
+            if (repeticao === 'mensal') limiteLoop = 12 - dataBase.getMonth();
+            if (repeticao === 'parcelado') limiteLoop = parseInt(document.getElementById('qtd_parcelas').value) || 1;
 
             for (let i = 0; i < limiteLoop; i++) {
                 const novaData = new Date(dataBase);
                 novaData.setMonth(novaData.getMonth() + i);
-                const dataStringFormatada = novaData.toISOString().split('T')[0];
+                let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
 
-                let descFinal = desc;
-                if (repeticao === 'parcelado') descFinal = `${desc} (${i + 1}/${limiteLoop})`;
-
-                bancoDeDados.push({
-                    id: Date.now() + i,
-                    desc: descFinal,
-                    tipo: tipo,
-                    data: dataStringFormatada,
-                    valor: valor,
-                    status: status
+                // Envia para o Firestore
+                await addDoc(colLancamentos, {
+                    desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
                 });
             }
         } else {
-            const index = bancoDeDados.findIndex(item => item.id === idEditando);
-            if (index !== -1) {
-                bancoDeDados[index].desc = desc;
-                bancoDeDados[index].tipo = tipo;
-                bancoDeDados[index].status = status;
-                bancoDeDados[index].data = data;
-                bancoDeDados[index].valor = valor;
-            }
-            cancelarEdicao();
+            // ATUALIZANDO (Edita documento específico na nuvem)
+            const docRef = doc(db, "lancamentos", idEditando);
+            await updateDoc(docRef, { desc, tipo, status, data, valor });
+            window.cancelarEdicao();
         }
-
-        salvarNoNavegadorEAtualizar();
+        
         limparFormulario();
-    }
+    };
 
-    // --- Edição e Ações Rápidas ---
-    function prepararEdicao(id) {
+    window.prepararEdicao = function(id) {
         const lancamento = bancoDeDados.find(item => item.id === id);
         if (!lancamento) return;
-
-        document.getElementById('desc').value = lancamento.desc;
-        document.getElementById('tipo').value = lancamento.tipo;
-        atualizarOpcoesStatus();
-        document.getElementById('status').value = lancamento.status;
-        document.getElementById('data').value = lancamento.data;
-        document.getElementById('valor').value = lancamento.valor;
-
-        document.getElementById('box-repeticao').classList.add('hidden');
-        document.getElementById('box-parcelas').classList.add('hidden');
-
+        document.getElementById('desc').value = lancamento.desc; document.getElementById('tipo').value = lancamento.tipo;
+        window.atualizarOpcoesStatus(); document.getElementById('status').value = lancamento.status;
+        document.getElementById('data').value = lancamento.data; document.getElementById('valor').value = lancamento.valor;
+        document.getElementById('box-repeticao').classList.add('hidden'); document.getElementById('box-parcelas').classList.add('hidden');
         idEditando = id;
-        document.getElementById('titulo-formulario').innerText = "Editando Lançamento";
-        document.getElementById('titulo-formulario').classList.add('text-yellow-500');
-        document.getElementById('btn-salvar').innerText = "Atualizar Lançamento";
-        document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
+        document.getElementById('titulo-formulario').innerText = "Editando Lançamento"; document.getElementById('titulo-formulario').classList.add('text-yellow-500');
+        document.getElementById('btn-salvar').innerText = "Atualizar Nuvem"; document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    };
 
-    function cancelarEdicao() {
+    window.cancelarEdicao = function() {
         idEditando = null;
         document.getElementById('box-repeticao').classList.remove('hidden');
-        document.getElementById('titulo-formulario').innerText = "Novo Lançamento";
-        document.getElementById('titulo-formulario').classList.remove('text-yellow-500');
-        document.getElementById('btn-salvar').innerText = "Salvar Lançamento";
-        document.getElementById('btn-cancelar-edicao').classList.add('hidden');
+        document.getElementById('titulo-formulario').innerText = "Novo Lançamento"; document.getElementById('titulo-formulario').classList.remove('text-yellow-500');
+        document.getElementById('btn-salvar').innerText = "Salvar na Nuvem"; document.getElementById('btn-cancelar-edicao').classList.add('hidden');
         limparFormulario();
-    }
+    };
 
-    function marcarConcluido(id) {
-        const index = bancoDeDados.findIndex(item => item.id === id);
-        if (index !== -1) {
-            const tipoConta = bancoDeDados[index].tipo;
-            bancoDeDados[index].status = tipoConta === 'Pagar' ? 'Pago' : 'Recebido';
-            salvarNoNavegadorEAtualizar();
+    window.marcarConcluido = async function(id) {
+        const lancamento = bancoDeDados.find(item => item.id === id);
+        if (lancamento) {
+            const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
+            const docRef = doc(db, "lancamentos", id);
+            await updateDoc(docRef, { status: novoStatus }); // Atualiza na nuvem
         }
-    }
+    };
 
-    function deletar(id) {
-        if (confirm("Deseja excluir definitivamente este lançamento?")) {
-            bancoDeDados = bancoDeDados.filter(conta => conta.id !== id);
-            salvarNoNavegadorEAtualizar();
+    window.deletar = async function(id) {
+        if (confirm("Deseja excluir definitivamente da nuvem?")) {
+            const docRef = doc(db, "lancamentos", id);
+            await deleteDoc(docRef); // Deleta da nuvem
         }
-    }
+    };
 
     function limparFormulario() {
-        document.getElementById('desc').value = '';
-        document.getElementById('valor').value = '';
-        document.getElementById('repeticao').value = 'unico';
-        mostrarOcultarParcelas();
+        document.getElementById('desc').value = ''; document.getElementById('valor').value = '';
+        document.getElementById('repeticao').value = 'unico'; window.mostrarOcultarParcelas();
     }
 
-    function salvarNoNavegadorEAtualizar() {
-        localStorage.setItem('ControleFinanceiroApp', JSON.stringify(bancoDeDados));
-        atualizarTela();
-    }
-
-    // --- Motor de Renderização Principal ---
-    function atualizarTela() {
+    window.atualizarTela = function() {
         const corpoTabela = document.getElementById('tabela-corpo');
         corpoTabela.innerHTML = ''; 
 
-        const fMes = document.getElementById('filtro-mes').value;
-        const fAno = document.getElementById('filtro-ano').value;
+        const fMes = document.getElementById('filtro-mes').value; const fAno = document.getElementById('filtro-ano').value;
         const controleMesAno = `${fMes}-${fAno}`;
-        
         document.getElementById('titulo-impressao').innerText = `- ${nomeMeses[fMes]} de ${fAno}`;
 
         const dadosFiltrados = bancoDeDados.filter(conta => {
-            const anoConta = conta.data.substring(0, 4);
-            const mesConta = conta.data.substring(5, 7);
+            const anoConta = conta.data.substring(0, 4); const mesConta = conta.data.substring(5, 7);
             return (anoConta === fAno && mesConta === fMes);
         });
 
         dadosFiltrados.sort((a, b) => new Date(a.data) - new Date(b.data));
 
         let totReceber = 0, totPagar = 0, totRecebido = 0, totPago = 0;
-        let qtdeContasPagar = 0;
-        let qtdeContasPagas = 0;
+        let qtdeContasPagar = 0, qtdeContasPagas = 0;
 
-        // Loop principal: processa os dados e desenha as linhas
         dadosFiltrados.forEach((conta, index) => {
-            // Cálculos
             if (conta.tipo === 'Receber' && conta.status === 'Pendente') totReceber += conta.valor;
             if (conta.tipo === 'Pagar' && conta.status === 'Pendente') totPagar += conta.valor;
             if (conta.status === 'Recebido') totRecebido += conta.valor;
             if (conta.status === 'Pago') totPago += conta.valor;
 
-            // Verificação para a animação de sucesso
-            if (conta.tipo === 'Pagar') {
-                qtdeContasPagar++;
-                if (conta.status === 'Pago') qtdeContasPagas++;
-            }
+            if (conta.tipo === 'Pagar') { qtdeContasPagar++; if (conta.status === 'Pago') qtdeContasPagas++; }
 
-            // Design visual
             let badgeClass = "bg-gray-700 text-gray-300 border-gray-600"; 
             if (conta.status === 'Pago') badgeClass = "bg-green-900/50 text-green-400 border-green-800"; 
             if (conta.status === 'Recebido') badgeClass = "bg-yellow-900/50 text-yellow-400 border-yellow-800"; 
 
             let btnBaixa = '';
             if (conta.status === 'Pendente') {
-                btnBaixa = `<button onclick="marcarConcluido(${conta.id})" class="text-gray-400 hover:text-white px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors mr-1">✔ Baixa</button>`;
+                btnBaixa = `<button onclick="marcarConcluido('${conta.id}')" class="text-gray-400 hover:text-white px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors mr-1">✔ Baixa</button>`;
             }
 
-            // MAGIA DO ZEBRADO: Calculado diretamente no JavaScript para garantir 100% de funcionamento
             const corZebrada = index % 2 === 0 ? "bg-gray-800/30" : "bg-transparent";
 
             const tr = document.createElement('tr');
@@ -480,50 +361,31 @@
                 <td class="px-4 py-3 font-medium text-gray-200">${conta.desc}</td>
                 <td class="px-4 py-3 text-gray-400">${conta.tipo === 'Pagar' ? 'Saída' : 'Entrada'}</td>
                 <td class="px-4 py-3 text-gray-200">R$ ${conta.valor.toFixed(2).replace('.', ',')}</td>
-                <td class="px-4 py-3">
-                    <span class="px-2 py-1 text-[10px] uppercase font-bold rounded border ${badgeClass}">${conta.status}</span>
-                </td>
+                <td class="px-4 py-3"><span class="px-2 py-1 text-[10px] uppercase font-bold rounded border ${badgeClass}">${conta.status}</span></td>
                 <td class="px-4 py-3 text-right whitespace-nowrap print-ocultar">
                     ${btnBaixa}
-                    <button onclick="prepararEdicao(${conta.id})" class="text-blue-400 hover:text-blue-300 px-2 text-sm transition-colors">Editar</button>
-                    <button onclick="deletar(${conta.id})" class="text-red-400 hover:text-red-300 px-2 text-sm transition-colors">Excluir</button>
+                    <button onclick="prepararEdicao('${conta.id}')" class="text-blue-400 hover:text-blue-300 px-2 text-sm">Editar</button>
+                    <button onclick="deletar('${conta.id}')" class="text-red-400 hover:text-red-300 px-2 text-sm">Excluir</button>
                 </td>
             `;
             corpoTabela.appendChild(tr);
         });
 
-        if (dadosFiltrados.length === 0) {
-            corpoTabela.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhum lançamento encontrado.</td></tr>`;
-        }
+        if (dadosFiltrados.length === 0) corpoTabela.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhum lançamento.</td></tr>`;
 
-        // --- Disparo da Gamificação ---
         const painelSucesso = document.getElementById('painel-sucesso');
         if (qtdeContasPagar > 0 && qtdeContasPagar === qtdeContasPagas) {
             painelSucesso.classList.remove('hidden');
-            // Dispara confete apenas 1x por mês para não ficar chato
-            if (confeteJaDisparadoMeseAno !== controleMesAno) {
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                confeteJaDisparadoMeseAno = controleMesAno;
-            }
-        } else {
-            painelSucesso.classList.add('hidden');
-        }
+            if (confeteJaDisparadoMeseAno !== controleMesAno) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); confeteJaDisparadoMeseAno = controleMesAno; }
+        } else { painelSucesso.classList.add('hidden'); }
 
-        // Atualiza Valores do Dashboard
-        document.getElementById('dash-receber').innerText = `R$ ${totReceber.toFixed(2).replace('.', ',')}`;
-        document.getElementById('dash-pagar').innerText = `R$ ${totPagar.toFixed(2).replace('.', ',')}`;
+        document.getElementById('dash-receber').innerText = `R$ ${totReceber.toFixed(2).replace('.', ',')}`; document.getElementById('dash-pagar').innerText = `R$ ${totPagar.toFixed(2).replace('.', ',')}`;
         document.getElementById('dash-recebido').innerText = `R$ ${totRecebido.toFixed(2).replace('.', ',')}`;
-        
         const saldoFinal = totRecebido - totPago;
         const saldoElemento = document.getElementById('dash-saldo');
         saldoElemento.innerText = `R$ ${saldoFinal.toFixed(2).replace('.', ',')}`;
-        saldoElemento.className = saldoFinal < 0 ? "text-xl font-semibold text-red-400" : "text-xl font-semibold text-white";
-    }
-
-    window.onload = function() {
-        configurarFiltrosIniciais(); 
+        saldoElemento.className = saldoFinal < 0 ? "text-xl font-bold text-red-400" : "text-xl font-bold text-white";
     };
 </script>
-
 </body>
 </html>
