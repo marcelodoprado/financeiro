@@ -300,7 +300,10 @@ const firebaseConfig = {
     }
 
     window.salvarLancamento = async function() {
-        if(!colLancamentos) return; // Trava de segurança
+        if(!colLancamentos) {
+            alert("Erro: O banco de dados não conectou. Faça login novamente.");
+            return; 
+        }
         
         const desc = document.getElementById('desc').value.trim();
         const tipo = document.getElementById('tipo').value;
@@ -309,32 +312,43 @@ const firebaseConfig = {
         const valor = parseFloat(document.getElementById('valor').value);
         const repeticao = document.getElementById('repeticao').value;
 
-        if (!desc || isNaN(valor) || valor <= 0 || !data) { alert("Preencha todos os campos obrigatórios."); return; }
-
-        if (idEditando === null) {
-            let limiteLoop = 1;
-            const dataBase = new Date(data + 'T12:00:00'); 
-            
-            if (repeticao === 'mensal') limiteLoop = 12 - dataBase.getMonth();
-            if (repeticao === 'parcelado') limiteLoop = parseInt(document.getElementById('qtd_parcelas').value) || 1;
-
-            for (let i = 0; i < limiteLoop; i++) {
-                const novaData = new Date(dataBase);
-                novaData.setMonth(novaData.getMonth() + i);
-                let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
-                
-                await addDoc(colLancamentos, {
-                    desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
-                });
-            }
-        } else {
-            const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
-            await updateDoc(docRef, { desc, tipo, status, data, valor });
-            window.cancelarEdicao();
+        if (!desc || isNaN(valor) || valor <= 0 || !data) { 
+            alert("Preencha todos os campos obrigatórios."); 
+            return; 
         }
-        limparFormulario();
-    };
 
+        // Tenta fazer o salvamento. Se o Firebase bloquear, ele cai no "catch" e mostra o erro!
+        try {
+            if (idEditando === null) {
+                let limiteLoop = 1;
+                const dataBase = new Date(data + 'T12:00:00'); 
+                
+                if (repeticao === 'mensal') limiteLoop = 12 - dataBase.getMonth();
+                if (repeticao === 'parcelado') limiteLoop = parseInt(document.getElementById('qtd_parcelas').value) || 1;
+
+                for (let i = 0; i < limiteLoop; i++) {
+                    const novaData = new Date(dataBase);
+                    novaData.setMonth(novaData.getMonth() + i);
+                    let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
+                    
+                    await addDoc(colLancamentos, {
+                        desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
+                    });
+                }
+            } else {
+                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
+                await updateDoc(docRef, { desc, tipo, status, data, valor });
+                window.cancelarEdicao();
+            }
+            limparFormulario();
+            // A tela atualizará sozinha graças ao onSnapshot!
+
+        } catch (erro) {
+            console.error("Erro detalhado do Firebase:", erro);
+            alert("Falha ao salvar na nuvem! Verifique as permissões do Firestore. Erro: " + erro.message);
+        }
+    };
+    
     window.prepararEdicao = function(id) {
         const lancamento = bancoDeDados.find(item => item.id === id);
         if (!lancamento) return;
