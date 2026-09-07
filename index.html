@@ -300,11 +300,15 @@ const firebaseConfig = {
     }
 
     window.salvarLancamento = async function() {
-        if(!colLancamentos) {
-            alert("Erro: O banco de dados não conectou. Faça login novamente.");
+        console.log("PASSO 1: Botão clicado!");
+        
+        if(!colLancamentos) { 
+            console.error("ERRO NO PASSO 2: colLancamentos está vazio. Usuário não validado.");
+            alert("Usuário não validado ou banco não conectado."); 
             return; 
         }
-        
+        console.log("PASSO 2: Pasta do banco identificada corretamente.");
+
         const desc = document.getElementById('desc').value.trim();
         const tipo = document.getElementById('tipo').value;
         const status = document.getElementById('status').value;
@@ -312,13 +316,16 @@ const firebaseConfig = {
         const valor = parseFloat(document.getElementById('valor').value);
         const repeticao = document.getElementById('repeticao').value;
 
+        console.log("PASSO 3: Dados capturados da tela:", { desc, tipo, status, data, valor, repeticao });
+
         if (!desc || isNaN(valor) || valor <= 0 || !data) { 
             alert("Preencha todos os campos obrigatórios."); 
             return; 
         }
 
-        // Tenta fazer o salvamento. Se o Firebase bloquear, ele cai no "catch" e mostra o erro!
         try {
+            console.log("PASSO 4: Tentando enviar para a nuvem do Google...");
+            
             if (idEditando === null) {
                 let limiteLoop = 1;
                 const dataBase = new Date(data + 'T12:00:00'); 
@@ -340,12 +347,13 @@ const firebaseConfig = {
                 await updateDoc(docRef, { desc, tipo, status, data, valor });
                 window.cancelarEdicao();
             }
+            
+            console.log("PASSO 5: Sucesso total! Dados gravados.");
             limparFormulario();
-            // A tela atualizará sozinha graças ao onSnapshot!
-
+            
         } catch (erro) {
-            console.error("Erro detalhado do Firebase:", erro);
-            alert("Falha ao salvar na nuvem! Verifique as permissões do Firestore. Erro: " + erro.message);
+            console.error("PASSO 5 FALHOU: ERRO DO FIREBASE:", erro);
+            alert("Falha ao salvar na nuvem! Erro: " + erro.message);
         }
     };
     
