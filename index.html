@@ -177,7 +177,7 @@
     // =======================================================
     // 1. INICIALIZAÇÃO DO SUPABASE
     // =======================================================
-    // ATENÇÃO: COLOQUE SUAS CHAVES AQUI
+    // ATENÇÃO: COLOQUE SUAS CHAVES AQUI (entre aspas simples)
     const supabaseUrl = 'https://kbsvasopeephsdkqidkm.supabase.co'; 
     const supabaseKey = 'sb_publishable_2ok-D1CZ-wigS-gCGPU0Aw_6IH4j94n';
     
@@ -185,7 +185,7 @@
     
     let bancoDeDados = [];
     let idEditando = null;
-    let lancamentoOriginalEditando = null; // Guarda os dados originais para edição em cascata
+    let lancamentoOriginalEditando = null;
     let confeteJaDisparadoMeseAno = "";
     let currentUser = null;
     
@@ -363,7 +363,6 @@
                     );
 
                     for (let conta of contasFuturas) {
-                        // Mantém a data de cada um, atualiza o resto
                         const { error } = await clienteSupabase.from('lancamentos')
                             .update({ desc: desc, tipo: tipo, valor: valor })
                             .eq('id', conta.id)
@@ -391,8 +390,9 @@
         }
     });
 
+    // CORREÇÃO APLICADA: Conversão segura usando String() para garantir a igualdade.
     window.marcarConcluido = async function(id) {
-        const lancamento = bancoDeDados.find(item => item.id === id);
+        const lancamento = bancoDeDados.find(item => String(item.id) === String(id));
         if (lancamento) {
             statusSync.innerText = '🟡 Atualizando...';
             const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
@@ -460,11 +460,12 @@
         atualizarTela();
     }
 
+    // CORREÇÃO APLICADA: Conversão segura usando String() para encontrar o ID corretamente.
     window.prepararEdicao = function(id) {
-        const lancamento = bancoDeDados.find(item => item.id === id);
+        const lancamento = bancoDeDados.find(item => String(item.id) === String(id));
         if (!lancamento) return;
         
-        // Guarda os dados de quem estamos editando para a lógica de cascata
+        // Guarda os dados originais para a edição em cascata
         lancamentoOriginalEditando = { ...lancamento };
         
         document.getElementById('desc').value = lancamento.desc; 
@@ -474,11 +475,10 @@
         document.getElementById('data').value = lancamento.data; 
         document.getElementById('valor').value = lancamento.valor;
         
-        // Esconde a criação de repetição, mostra a edição de repetição
         document.getElementById('box-repeticao').classList.add('hidden'); 
         document.getElementById('box-parcelas').classList.add('hidden');
         document.getElementById('box-editar-futuros').classList.remove('hidden');
-        document.getElementById('aplicar-futuros').checked = false; // Desmarcado por padrão
+        document.getElementById('aplicar-futuros').checked = false;
         
         idEditando = id;
         document.getElementById('titulo-formulario').innerText = "Editando Lançamento"; 
@@ -517,7 +517,6 @@
         const corpoTabela = document.getElementById('tabela-corpo');
         corpoTabela.innerHTML = ''; 
         
-        // Mantém a data de impressão atualizada com o filtro atual
         document.getElementById('titulo-impressao').innerText = `- ${nomeMeses[fMes]} de ${fAno}`;
 
         const dadosFiltrados = bancoDeDados.filter(conta => conta.data && conta.data.substring(0, 4) === fAno && conta.data.substring(5, 7) === fMes);
@@ -526,7 +525,7 @@
         let totReceber = 0, totPagar = 0, totRecebido = 0, totPago = 0;
         let qtdeContasPagar = 0, qtdeContasPagas = 0;
 
-        dadosFiltrados.forEach((conta) => {
+        dadosFiltrados.forEach((conta, index) => {
             if (conta.tipo === 'Receber' && conta.status === 'Pendente') totReceber += conta.valor;
             if (conta.tipo === 'Pagar' && conta.status === 'Pendente') totPagar += conta.valor;
             if (conta.status === 'Recebido') totRecebido += conta.valor;
@@ -540,8 +539,6 @@
 
             let btnBaixa = conta.status === 'Pendente' ? `<button onclick="marcarConcluido('${conta.id}')" class="text-gray-400 hover:text-white px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors mr-1">✔ Baixa</button>` : '';
 
-            // Note que removi a lógica de zebrado embutida aqui, deixamos apenas a classe "hover" e a transição.
-            // O CSS agora faz o trabalho pesado de zebrar a tabela perfeitamente.
             corpoTabela.innerHTML += `
                 <tr class="hover:bg-gray-750 transition-colors">
                     <td class="px-4 py-3 whitespace-nowrap text-gray-400">${formatarData(conta.data)}</td>
