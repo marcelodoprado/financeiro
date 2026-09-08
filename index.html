@@ -73,7 +73,7 @@
                 <div class="flex items-center gap-2 mt-1 print-ocultar">
                     <p id="usuario-logado" class="text-xs text-blue-400"></p>
                     <span class="text-gray-600 text-xs">|</span>
-                    <!-- O NOSSO NOVO SEMÁFORO DE SINCRONIZAÇÃO -->
+                    <!-- SEMÁFORO DE SINCRONIZAÇÃO -->
                     <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando...</p>
                 </div>
             </div>
@@ -141,7 +141,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     
-    // Importamos o pacote completo para suporte Offline
+    // Suporte Offline importado
     import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
     // =======================================================
@@ -159,10 +159,10 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     
-    // Configuração Robusta com Cache Local Ativado
+    // O SEGREDO MÁGICO 2.0: Cache Local ligado, MAS deixamos o Firebase livre para usar WebSockets rápidos!
+    // Removemos o experimentalForceLongPolling que causava lentidão.
     const db = initializeFirestore(app, {
-        localCache: persistentLocalCache({tabManager: persistentSingleTabManager()}),
-        experimentalForceLongPolling: true
+        localCache: persistentLocalCache({tabManager: persistentSingleTabManager()})
     });
     
     let colLancamentos = null;
@@ -178,7 +178,7 @@
     const statusSync = document.getElementById('status-sincronizacao');
 
     // =======================================================
-    // CONECTANDO OS BOTÕES (Ações de Tela)
+    // CONECTANDO OS BOTÕES
     // =======================================================
     document.getElementById('btn-salvar').addEventListener('click', () => {
         if(!colLancamentos) { 
@@ -193,7 +193,7 @@
         const repeticao = document.getElementById('repeticao').value;
 
         if (!desc || isNaN(valor) || valor <= 0 || !data) { 
-            alert("Preencha todos os campos obrigatórios (Descrição, Data e Valor)."); return; 
+            alert("Preencha todos os campos obrigatórios."); return; 
         }
 
         try {
@@ -209,10 +209,10 @@
                     novaData.setMonth(novaData.getMonth() + i);
                     let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
                     
-                    // Salvamento assíncrono transparente (Não trava a tela)
+                    // Envio em segundo plano (Não trava o App)
                     addDoc(colLancamentos, {
                         desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
-                    }).catch(e => console.error("Aguardando rede para enviar..."));
+                    }).catch(e => console.error("Aguardando rede..."));
                 }
             } else {
                 const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
@@ -243,9 +243,7 @@
         else document.getElementById('box-parcelas').classList.add('hidden');
     });
 
-    // =======================================================
     // SISTEMA DE LOGIN E REGISTRO
-    // =======================================================
     let modoRegistro = false;
     document.getElementById('btn-alternar-registro').addEventListener('click', () => {
         modoRegistro = !modoRegistro;
@@ -310,11 +308,10 @@
     function iniciarEscutaDoBanco() {
         if(unsubscribeSnapshot) unsubscribeSnapshot();
         
-        // includeMetadataChanges permite que o app saiba se a conta tá só no celular ou já foi pra nuvem
         unsubscribeSnapshot = onSnapshot(colLancamentos, { includeMetadataChanges: true }, (snapshot) => {
             bancoDeDados = [];
             
-            // Verifica o semáforo de sincronização
+            // Vigia de Nuvem em Tempo Real
             if (snapshot.metadata.hasPendingWrites) {
                 statusSync.innerText = '🟡 Aguardando Nuvem...';
                 statusSync.className = 'text-xs font-bold text-yellow-500';
