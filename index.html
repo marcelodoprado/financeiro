@@ -9,12 +9,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- O seu Manifesto PWA Religado -->
+    <!-- O seu Manifesto PWA -->
     <link rel="manifest" href="manifest.json">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- Apenas o Supabase. Adeus Firebase! -->
+    <!-- SDK do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -135,13 +135,14 @@
 
 <script>
     // =======================================================
-    // 1. INICIALIZAÇÃO DO SUPABASE
+    // 1. INICIALIZAÇÃO DO SUPABASE (Sem Duplicidades)
     // =======================================================
     
-    // COLE SUAS CHAVES AQUI (Mantenha as aspas simples):
+    // Suas chaves já configuradas e corretas
     const supabaseUrl = 'https://kbsvasopeephsdkqidkm.supabase.co'; 
     const supabaseKey = 'sb_publishable_2ok-D1CZ-wigS-gCGPU0Aw_6IH4j94n';
     
+    // Declarado uma ÚNICA vez para não travar a tela
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
     
     let bancoDeDados = [];
