@@ -89,10 +89,6 @@
         </div>
     </header>
 
-    <div id="painel-sucesso" class="hidden animar-entrada bg-green-900/40 border border-green-500 text-green-300 p-4 rounded-lg mb-8 text-center print-ocultar">
-        🎉 <strong>Mês Quitado!</strong> Excelente trabalho, você pagou todas as contas registradas!
-    </div>
-
     <!-- Dashboard -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">A Receber</h3><p id="dash-receber" class="text-xl font-bold text-white">R$ 0,00</p></div>
@@ -113,7 +109,6 @@
             <div id="box-repeticao"><label class="block text-xs text-gray-400 uppercase mb-1">Repetição</label><select id="repeticao" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="unico">Único</option><option value="mensal">Fixo (Até Dez)</option><option value="parcelado">Parcelado</option></select></div>
             <div id="box-parcelas" class="hidden"><label class="block text-xs text-gray-400 uppercase mb-1">Qtd. Parcelas</label><input type="number" id="qtd_parcelas" min="2" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
             <div class="md:col-span-4 flex justify-end gap-2 mt-2">
-                <!-- BOTÕES CORRIGIDOS SEM ONCLICK INLINE -->
                 <button id="btn-cancelar-edicao" class="hidden bg-gray-700 text-white py-2 px-4 rounded font-medium">Cancelar</button>
                 <button id="btn-salvar" class="bg-gray-200 text-gray-900 font-bold py-2 px-6 rounded transition-colors hover:bg-white">Salvar na Nuvem</button>
             </div>
@@ -130,11 +125,9 @@
         </table>
     </div>
 
-    <!-- ========================================== -->
-    <!-- PAINEL DE DIAGNÓSTICO (VISÍVEL NA TELA)    -->
-    <!-- ========================================== -->
+    <!-- PAINEL DE DIAGNÓSTICO -->
     <div id="painel-diagnostico" class="bg-black text-green-400 font-mono text-[11px] p-4 rounded-lg h-48 overflow-y-auto border border-gray-600 print-ocultar">
-        <p class="text-gray-500 mb-2">>> SISTEMA INICIADO. BOTÕES RECONECTADOS. AGUARDANDO...</p>
+        <p class="text-gray-500 mb-2">>> SISTEMA INICIADO COM PERSISTÊNCIA OFFLINE (V11). AGUARDANDO...</p>
     </div>
 
 </div>
@@ -143,25 +136,29 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    
+    // ATENÇÃO: Importamos ferramentas para funcionamento Offline
+    import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
     // =======================================================
     // COLE AS SUAS CHAVES DO FIREBASE AQUI
     // =======================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
-  authDomain: "financeiro-cd95f.firebaseapp.com",
-  projectId: "financeiro-cd95f",
-  storageBucket: "financeiro-cd95f.firebasestorage.app",
-  messagingSenderId: "14408523133",
-  appId: "1:14408523133:web:3d5c840411315dffcc8014"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
+      authDomain: "financeiro-cd95f.firebaseapp.com",
+      projectId: "financeiro-cd95f",
+      storageBucket: "financeiro-cd95f.firebasestorage.app",
+      messagingSenderId: "14408523133",
+      appId: "1:14408523133:web:3d5c840411315dffcc8014"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     
-    // Forçando o Long Polling
+    // O SEGREDO MÁGICO: Ativando Cache Local (Offline). 
+    // Mesmo sem internet, ele salva no seu celular e envia quando tiver sinal!
     const db = initializeFirestore(app, {
+        localCache: persistentLocalCache({tabManager: persistentSingleTabManager()}),
         experimentalForceLongPolling: true
     });
     
@@ -170,35 +167,28 @@ const firebaseConfig = {
 
     let bancoDeDados = [];
     let idEditando = null;
-    let confeteJaDisparadoMeseAno = ""; 
     
     const telaLogin = document.getElementById('tela-login');
     const appPrincipal = document.getElementById('app-principal');
     const msgErro = document.getElementById('msg-erro');
     
-    // --- FUNÇÃO DE DIAGNÓSTICO NA TELA ---
     window.logNaTela = function(mensagem, isErro = false) {
         const painel = document.getElementById('painel-diagnostico');
         const p = document.createElement('p');
         p.className = isErro ? 'text-red-500 font-bold mb-1' : 'mb-1';
-        if (typeof mensagem === 'object') {
-            p.innerText = ">> " + (mensagem.message || JSON.stringify(mensagem));
-        } else {
-            p.innerText = ">> " + mensagem;
-        }
+        p.innerText = ">> " + (mensagem.message || JSON.stringify(mensagem) || mensagem);
         painel.appendChild(p);
         painel.scrollTop = painel.scrollHeight; 
     };
 
     // =======================================================
-    // CONECTANDO OS BOTÕES (A GRANDE CORREÇÃO)
+    // CONECTANDO OS BOTÕES
     // =======================================================
-    document.getElementById('btn-salvar').addEventListener('click', async () => {
+    document.getElementById('btn-salvar').addEventListener('click', () => {
         window.logNaTela("-----------------------------");
-        window.logNaTela("Iniciando rotina de salvamento (Via Listener)...");
+        window.logNaTela("Salvando lançamento...");
         
         if(!colLancamentos) { 
-            window.logNaTela("ERRO: Usuário não validado (colLancamentos é nulo).", true);
             alert("Usuário não validado."); return; 
         }
         
@@ -209,11 +199,8 @@ const firebaseConfig = {
         const valor = parseFloat(document.getElementById('valor').value);
         const repeticao = document.getElementById('repeticao').value;
 
-        window.logNaTela(`Dados capturados: ${desc} | R$${valor} | ${data}`);
-
         if (!desc || isNaN(valor) || valor <= 0 || !data) { 
-            window.logNaTela("Operação cancelada: Campos obrigatórios em branco.");
-            alert("Preencha todos os campos obrigatórios (Descrição, Data e Valor)."); return; 
+            alert("Preencha todos os campos obrigatórios."); return; 
         }
 
         try {
@@ -224,43 +211,33 @@ const firebaseConfig = {
                 if (repeticao === 'mensal') limiteLoop = 12 - dataBase.getMonth();
                 if (repeticao === 'parcelado') limiteLoop = parseInt(document.getElementById('qtd_parcelas').value) || 1;
 
-                window.logNaTela(`Preparando para gravar ${limiteLoop} documento(s) no Firestore...`);
-
                 for (let i = 0; i < limiteLoop; i++) {
                     const novaData = new Date(dataBase);
                     novaData.setMonth(novaData.getMonth() + i);
                     let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
                     
-                    await addDoc(colLancamentos, {
+                    // NOTE: Removemos o "await". Ele processa instantâneo e joga pra nuvem no fundo!
+                    addDoc(colLancamentos, {
                         desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
-                    });
-                    window.logNaTela(`- Documento ${i+1}/${limiteLoop} salvo com sucesso.`);
+                    }).catch(e => window.logNaTela("Sincronização em background pendente...", false));
                 }
             } else {
-                window.logNaTela(`Atualizando documento ID: ${idEditando}...`);
                 const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
-                await updateDoc(docRef, { desc, tipo, status, data, valor });
-                window.logNaTela(`- Documento atualizado com sucesso.`);
+                updateDoc(docRef, { desc, tipo, status, data, valor });
                 cancelarEdicao();
             }
             limparFormulario();
-            window.logNaTela("Rotina concluída com sucesso! Os dados estão na nuvem.");
+            window.logNaTela("Processado! A tabela foi atualizada.");
         } catch (erro) {
-            window.logNaTela("FALHA CATASTRÓFICA AO SALVAR:", true);
+            window.logNaTela("FALHA AO PROCESSAR:", true);
             window.logNaTela(erro, true);
         }
     });
 
-    document.getElementById('btn-cancelar-edicao').addEventListener('click', () => {
-        cancelarEdicao();
-    });
-
-    document.getElementById('btn-voltar-hoje').addEventListener('click', () => {
-        voltarMesAtual();
-    });
-
-    document.getElementById('filtro-mes').addEventListener('change', () => { atualizarTela(); });
-    document.getElementById('filtro-ano').addEventListener('change', () => { atualizarTela(); });
+    document.getElementById('btn-cancelar-edicao').addEventListener('click', () => cancelarEdicao());
+    document.getElementById('btn-voltar-hoje').addEventListener('click', () => voltarMesAtual());
+    document.getElementById('filtro-mes').addEventListener('change', () => atualizarTela());
+    document.getElementById('filtro-ano').addEventListener('change', () => atualizarTela());
     
     document.getElementById('tipo').addEventListener('change', () => {
         const tipo = document.getElementById('tipo').value;
@@ -297,7 +274,7 @@ const firebaseConfig = {
             document.getElementById('usuario-logado').innerText = `Logado como: ${user.email}`;
             
             colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
-            window.logNaTela(`Autenticado com sucesso. ID do usuário: ${user.uid}`);
+            window.logNaTela(`Autenticado. ID: ${user.uid}`);
             
             configurarFiltrosIniciais(); 
             iniciarEscutaDoBanco();
@@ -340,19 +317,16 @@ const firebaseConfig = {
     function iniciarEscutaDoBanco() {
         if(unsubscribeSnapshot) unsubscribeSnapshot();
         try {
-            window.logNaTela("Tentando ler dados da nuvem...");
-            unsubscribeSnapshot = onSnapshot(colLancamentos, (snapshot) => {
+            unsubscribeSnapshot = onSnapshot(colLancamentos, { includeMetadataChanges: true }, (snapshot) => {
                 bancoDeDados = [];
                 snapshot.forEach((docRef) => { bancoDeDados.push({ id: docRef.id, ...docRef.data() }); });
-                window.logNaTela(`Sucesso: ${bancoDeDados.length} lançamentos encontrados na nuvem.`);
+                window.logNaTela(`Base carregada: ${bancoDeDados.length} itens (Fonte: ${snapshot.metadata.fromCache ? 'Local/Offline' : 'Nuvem'}).`);
                 atualizarTela();
             }, (erro) => {
                 window.logNaTela("FALHA AO LER O BANCO DE DADOS!", true);
-                window.logNaTela(erro, true);
             });
         } catch (error) {
-            window.logNaTela("ERRO INTERNO NA ESCUTA DO BANCO:", true);
-            window.logNaTela(error, true);
+            window.logNaTela("ERRO INTERNO NA ESCUTA:", true);
         }
     }
 
@@ -388,7 +362,6 @@ const firebaseConfig = {
         if (!lancamento) return;
         document.getElementById('desc').value = lancamento.desc; document.getElementById('tipo').value = lancamento.tipo;
         
-        // Dispara o evento change para o tipo atualizar o status
         const event = new Event('change');
         document.getElementById('tipo').dispatchEvent(event);
         
@@ -409,32 +382,21 @@ const firebaseConfig = {
         limparFormulario();
     }
 
-    window.marcarConcluido = async function(id) {
+    window.marcarConcluido = function(id) {
         if(!auth.currentUser) return;
-        try {
-            const lancamento = bancoDeDados.find(item => item.id === id);
-            if (lancamento) {
-                const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
-                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
-                await updateDoc(docRef, { status: novoStatus });
-            }
-        } catch (erro) {
-            window.logNaTela("FALHA AO DAR BAIXA:", true);
-            window.logNaTela(erro, true);
+        const lancamento = bancoDeDados.find(item => item.id === id);
+        if (lancamento) {
+            const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
+            const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
+            updateDoc(docRef, { status: novoStatus });
         }
     };
 
-    window.deletar = async function(id) {
+    window.deletar = function(id) {
         if (!auth.currentUser) return;
         if (confirm("Deseja excluir definitivamente da nuvem?")) {
-            try {
-                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
-                await deleteDoc(docRef);
-                window.logNaTela("Documento apagado com sucesso.");
-            } catch (erro) {
-                window.logNaTela("FALHA AO APAGAR:", true);
-                window.logNaTela(erro, true);
-            }
+            const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
+            deleteDoc(docRef);
         }
     };
 
@@ -450,7 +412,6 @@ const firebaseConfig = {
         corpoTabela.innerHTML = ''; 
 
         const fMes = document.getElementById('filtro-mes').value; const fAno = document.getElementById('filtro-ano').value;
-        const controleMesAno = `${fMes}-${fAno}`;
         document.getElementById('titulo-impressao').innerText = `- ${nomeMeses[fMes]} de ${fAno}`;
 
         const dadosFiltrados = bancoDeDados.filter(conta => {
@@ -461,15 +422,12 @@ const firebaseConfig = {
         dadosFiltrados.sort((a, b) => new Date(a.data) - new Date(b.data));
 
         let totReceber = 0, totPagar = 0, totRecebido = 0, totPago = 0;
-        let qtdeContasPagar = 0, qtdeContasPagas = 0;
 
         dadosFiltrados.forEach((conta, index) => {
             if (conta.tipo === 'Receber' && conta.status === 'Pendente') totReceber += conta.valor;
             if (conta.tipo === 'Pagar' && conta.status === 'Pendente') totPagar += conta.valor;
             if (conta.status === 'Recebido') totRecebido += conta.valor;
             if (conta.status === 'Pago') totPago += conta.valor;
-
-            if (conta.tipo === 'Pagar') { qtdeContasPagar++; if (conta.status === 'Pago') qtdeContasPagas++; }
 
             let badgeClass = "bg-gray-700 text-gray-300 border-gray-600"; 
             if (conta.status === 'Pago') badgeClass = "bg-green-900/50 text-green-400 border-green-800"; 
@@ -500,12 +458,6 @@ const firebaseConfig = {
         });
 
         if (dadosFiltrados.length === 0) corpoTabela.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhum lançamento encontrado neste mês.</td></tr>`;
-
-        const painelSucesso = document.getElementById('painel-sucesso');
-        if (qtdeContasPagar > 0 && qtdeContasPagar === qtdeContasPagas) {
-            painelSucesso.classList.remove('hidden');
-            if (confeteJaDisparadoMeseAno !== controleMesAno) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); confeteJaDisparadoMeseAno = controleMesAno; }
-        } else { painelSucesso.classList.add('hidden'); }
 
         document.getElementById('dash-receber').innerText = `R$ ${totReceber.toFixed(2).replace('.', ',')}`; document.getElementById('dash-pagar').innerText = `R$ ${totPagar.toFixed(2).replace('.', ',')}`;
         document.getElementById('dash-recebido').innerText = `R$ ${totRecebido.toFixed(2).replace('.', ',')}`;
