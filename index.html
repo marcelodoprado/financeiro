@@ -74,16 +74,10 @@
                     <p id="usuario-logado" class="text-xs text-blue-400"></p>
                     <span class="text-gray-600 text-xs">|</span>
                     <!-- SEMÁFORO DE SINCRONIZAÇÃO -->
-                    <p id="status-sincronizacao" class="text-xs font-bold text-gray-500">Conectando Nuvem...</p>
+                    <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando Nuvem...</p>
                 </div>
             </div>
-            <div class="flex gap-2">
-                <!-- O NOVO BOTÃO DE DIAGNÓSTICO -->
-                <button id="btn-diagnostico" class="text-xs uppercase bg-blue-900/50 hover:bg-blue-800 text-blue-300 border border-blue-800 px-3 py-1 rounded transition-colors print-ocultar font-bold flex items-center gap-1">
-                    🔍 Raio-X do Servidor
-                </button>
-                <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
-            </div>
+            <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
         </div>
         
         <div class="flex items-center gap-3 print-ocultar flex-wrap justify-center">
@@ -99,6 +93,10 @@
             <button onclick="window.print()" class="bg-gray-200 hover:bg-white text-gray-900 font-bold py-2 px-4 rounded text-sm">Gerar PDF</button>
         </div>
     </header>
+
+    <div id="painel-sucesso" class="hidden animar-entrada bg-green-900/40 border border-green-500 text-green-300 p-4 rounded-lg mb-8 text-center print-ocultar">
+        🎉 <strong>Mês Quitado!</strong> Excelente trabalho, você pagou todas as contas registradas!
+    </div>
 
     <!-- Dashboard -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -138,11 +136,15 @@
 
 </div>
 
-<!-- JAVASCRIPT -->
+<!-- ======================================================= -->
+<!-- JAVASCRIPT: ARQUITETURA FINAL COM LONG POLLING          -->
+<!-- ======================================================= -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    
+    // Importação clássica
+    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
@@ -155,7 +157,11 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app); 
+    
+    // O FURA-BLOQUEIO: Agora que o banco existe, isso vai funcionar perfeitamente
+    const db = initializeFirestore(app, {
+        experimentalForceLongPolling: true
+    });
     
     let colLancamentos = null;
     let unsubscribeSnapshot = null; 
@@ -169,44 +175,7 @@
     const statusSync = document.getElementById('status-sincronizacao');
 
     // =======================================================
-    // A FERRAMENTA AVANÇADA: RAIO-X DO SERVIDOR
-    // =======================================================
-    document.getElementById('btn-diagnostico').addEventListener('click', async () => {
-        statusSync.innerText = '🔍 Executando Raio-X...';
-        
-        try {
-            // 1. Pega a credencial de segurança do usuário logado
-            const token = await auth.currentUser.getIdToken();
-            const projectId = firebaseConfig.projectId;
-            
-            // 2. Monta a URL direta para o servidor do Google (Ignorando o SDK do Firebase)
-            const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/usuarios/${auth.currentUser.uid}/lancamentos`;
-            
-            // 3. Faz a batida na porta
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const respostaGoogle = await response.json();
-            
-            // 4. Analisa a resposta e imprime na tela para o Marcelo
-            if (response.ok) {
-                alert("✅ ACESSO LIVRE!\n\nO servidor do Google respondeu 200 OK. Isso significa que o banco existe, a regra de segurança passou e a rede não está bloqueada. O erro é puramente no WebSocket.\n\nResposta parcial: " + JSON.stringify(respostaGoogle).substring(0, 100));
-            } else {
-                alert(`❌ BLOQUEIO DETECTADO NO SERVIDOR!\n\nCódigo de Erro: ${respostaGoogle.error.code}\nStatus: ${respostaGoogle.error.status}\nMotivo Exato: ${respostaGoogle.error.message}\n\nTire um print ou me envie esses dados para resolvermos na raiz!`);
-            }
-            
-        } catch (erro) {
-            alert(`🔴 FALHA DE REDE ABSOLUTA!\n\nSeu computador/celular não consegue alcançar os servidores do Google (firestore.googleapis.com).\n\nErro Técnico: ${erro.message}`);
-        }
-        
-        statusSync.innerText = '🔍 Raio-X Concluído';
-    });
-
-
-    // =======================================================
-    // SALVAMENTO (PADRÃO E BLOQUEANTE)
+    // SALVAMENTO SEGURO
     // =======================================================
     document.getElementById('btn-salvar').addEventListener('click', async () => {
         if(!colLancamentos) { 
@@ -421,8 +390,6 @@
                 const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
                 const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
                 await updateDoc(docRef, { status: novoStatus });
-                statusSync.innerText = '🟢 Nuvem Atualizada';
-                statusSync.className = 'text-xs font-bold text-green-500';
             }
         } catch (erro) {
             statusSync.innerText = '🔴 Erro de Conexão';
@@ -439,8 +406,6 @@
             try {
                 const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
                 await deleteDoc(docRef);
-                statusSync.innerText = '🟢 Nuvem Atualizada';
-                statusSync.className = 'text-xs font-bold text-green-500';
             } catch (erro) {
                 statusSync.innerText = '🔴 Erro de Conexão';
                 statusSync.className = 'text-xs font-bold text-red-500';
