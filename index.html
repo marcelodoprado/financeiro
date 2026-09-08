@@ -106,6 +106,38 @@
         <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">Saldo Mês</h3><p id="dash-saldo" class="text-xl font-bold text-white">R$ 0,00</p></div>
     </div>
 
+<!-- ADICIONADO -->
+    
+<import { getFirestore, doc, setDoc } from "firebase/firestore";
+<import { getAuth } from "firebase/auth";
+
+<async function salvarLancamento() {
+  const db = getFirestore();
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    console.error("Erro: Nenhum usuário está logado!");
+    return;
+  }
+
+  // Caminho exato exigido pelas suas regras de segurança
+  <const caminho = doc(db, "usuarios", user.uid, "lancamentos", "teste_id");
+
+  try {
+    <console.log("Tentando salvar...");
+   <await setDoc(caminho, {
+      descricao: "Teste de Gravação",
+      valor: 50.00,
+      data: new Date()
+    });
+    <console.log("Sucesso ao gravar no Firestore!");
+  } catch (error) {
+    // Esse log vai revelar o erro real se a gravação falhar
+    <console.error("Erro capturado ao salvar no Firestore: ", error);
+  }
+}
+
     <!-- Formulário -->
     <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8 print-ocultar">
         <h2 id="titulo-formulario" class="text-lg font-medium text-white mb-4">Novo Lançamento</h2>
