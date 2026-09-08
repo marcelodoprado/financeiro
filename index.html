@@ -9,11 +9,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- A linha abaixo religa o seu PWA para instalação no celular -->
+    <!-- O seu Manifesto PWA Religado -->
     <link rel="manifest" href="manifest.json">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Apenas o Supabase. Adeus Firebase! -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -134,12 +135,10 @@
 
 <script>
     // =======================================================
-    // 1. INICIALIZAÇÃO DO SUPABASE (A Nova Infraestrutura)
+    // 1. INICIALIZAÇÃO DO SUPABASE
     // =======================================================
     
-    // ATENÇÃO: SUBSTITUA OS VALORES ABAIXO PELAS SUAS CHAVES REAIS.
-    // Mantenha as aspas simples ('') envolvendo o texto da chave.
-    
+    // COLE SUAS CHAVES AQUI (Mantenha as aspas simples):
     const supabaseUrl = 'https://kbsvasopeephsdkqidkm.supabase.co'; 
     const supabaseKey = 'sb_publishable_2ok-D1CZ-wigS-gCGPU0Aw_6IH4j94n';
     
