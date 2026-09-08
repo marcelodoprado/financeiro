@@ -73,8 +73,8 @@
                 <div class="flex items-center gap-2 mt-1 print-ocultar">
                     <p id="usuario-logado" class="text-xs text-blue-400"></p>
                     <span class="text-gray-600 text-xs">|</span>
-                    <!-- SEMÁFORO DE SINCRONIZAÇÃO -->
-                    <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando...</p>
+                    <!-- INDICADOR DE STATUS ONLINE -->
+                    <p id="status-sincronizacao" class="text-xs font-bold text-gray-500">Aguardando Conexão...</p>
                 </div>
             </div>
             <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
@@ -136,17 +136,16 @@
 
 </div>
 
-<!-- JAVASCRIPT: FIREBASE E LÓGICA (SDK Versão 10.13.0) -->
+<!-- ======================================================= -->
+<!-- JAVASCRIPT: NOVA ARQUITETURA "FIRESTORE LITE" (HTTP REST) -->
+<!-- ======================================================= -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     
-    // Suporte Offline importado
-    import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    // ATENÇÃO: Importando o "firestore-lite" para burlar bloqueios de 4G
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-lite.js";
 
-    // =======================================================
-    // COLE AS SUAS CHAVES DO FIREBASE AQUI
-    // =======================================================
     const firebaseConfig = {
       apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
       authDomain: "financeiro-cd95f.firebaseapp.com",
@@ -158,16 +157,9 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    
-    // O SEGREDO MÁGICO 2.0: Cache Local ligado, MAS deixamos o Firebase livre para usar WebSockets rápidos!
-    // Removemos o experimentalForceLongPolling que causava lentidão.
-    const db = initializeFirestore(app, {
-        localCache: persistentLocalCache({tabManager: persistentSingleTabManager()})
-    });
+    const db = getFirestore(app); // O Lite não precisa de configuração de Long Polling
     
     let colLancamentos = null;
-    let unsubscribeSnapshot = null; 
-
     let bancoDeDados = [];
     let idEditando = null;
     let confeteJaDisparadoMeseAno = ""; 
@@ -178,9 +170,38 @@
     const statusSync = document.getElementById('status-sincronizacao');
 
     // =======================================================
-    // CONECTANDO OS BOTÕES
+    // FUNÇÃO PRINCIPAL: BAXIAR DADOS DA NUVEM (VIA HTTP)
     // =======================================================
-    document.getElementById('btn-salvar').addEventListener('click', () => {
+    async function carregarDadosDaNuvem() {
+        if(!colLancamentos) return;
+        
+        statusSync.innerText = '⏳ Baixando Dados...';
+        statusSync.className = 'text-xs font-bold text-yellow-500';
+        
+        try {
+            // Puxa os dados como se estivesse abrindo um site normal (Imbloqueável)
+            const querySnapshot = await getDocs(colLancamentos);
+            bancoDeDados = [];
+            querySnapshot.forEach((docRef) => { 
+                bancoDeDados.push({ id: docRef.id, ...docRef.data() }); 
+            });
+            
+            atualizarTela();
+            
+            statusSync.innerText = '🟢 Nuvem Atualizada';
+            statusSync.className = 'text-xs font-bold text-green-500';
+        } catch (erro) {
+            console.error("Erro de rede:", erro);
+            statusSync.innerText = '🔴 Falha de Conexão';
+            statusSync.className = 'text-xs font-bold text-red-500';
+            alert("Aviso: O aplicativo não conseguiu acessar a internet. Verifique sua rede.");
+        }
+    }
+
+    // =======================================================
+    // CONECTANDO OS BOTÕES DE SALVAR
+    // =======================================================
+    document.getElementById('btn-salvar').addEventListener('click', async () => {
         if(!colLancamentos) { 
             alert("Sua sessão expirou. Faça login novamente."); return; 
         }
@@ -196,6 +217,9 @@
             alert("Preencha todos os campos obrigatórios."); return; 
         }
 
+        statusSync.innerText = '🟡 Salvando Online...';
+        statusSync.className = 'text-xs font-bold text-yellow-500';
+
         try {
             if (idEditando === null) {
                 let limiteLoop = 1;
@@ -209,19 +233,25 @@
                     novaData.setMonth(novaData.getMonth() + i);
                     let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
                     
-                    // Envio em segundo plano (Não trava o App)
-                    addDoc(colLancamentos, {
+                    // Espera cada documento ser salvo com sucesso na nuvem
+                    await addDoc(colLancamentos, {
                         desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
-                    }).catch(e => console.error("Aguardando rede..."));
+                    });
                 }
             } else {
                 const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
-                updateDoc(docRef, { desc, tipo, status, data, valor });
+                await updateDoc(docRef, { desc, tipo, status, data, valor });
                 cancelarEdicao();
             }
             limparFormulario();
+            
+            // Depois de salvar, pede pro Firebase atualizar a tela automaticamente
+            await carregarDadosDaNuvem();
+            
         } catch (erro) {
-            alert("Erro interno: " + erro.message);
+            statusSync.innerText = '🔴 Falha ao Salvar';
+            statusSync.className = 'text-xs font-bold text-red-500';
+            alert("Sua rede falhou e o documento não foi salvo. Verifique sua conexão e tente novamente.");
         }
     });
 
@@ -243,7 +273,9 @@
         else document.getElementById('box-parcelas').classList.add('hidden');
     });
 
-    // SISTEMA DE LOGIN E REGISTRO
+    // =======================================================
+    // SISTEMA DE LOGIN
+    // =======================================================
     let modoRegistro = false;
     document.getElementById('btn-alternar-registro').addEventListener('click', () => {
         modoRegistro = !modoRegistro;
@@ -264,13 +296,13 @@
             appPrincipal.classList.remove('hidden');
             document.getElementById('usuario-logado').innerText = `${user.email}`;
             
+            // Monta o caminho do banco e chama o primeiro download de dados
             colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
             configurarFiltrosIniciais(); 
-            iniciarEscutaDoBanco();
+            carregarDadosDaNuvem();
         } else {
             appPrincipal.classList.add('hidden');
             telaLogin.classList.remove('hidden');
-            if(unsubscribeSnapshot) unsubscribeSnapshot(); 
             bancoDeDados = []; 
         }
     });
@@ -303,32 +335,8 @@
     }
 
     // =======================================================
-    // CONEXÃO EM TEMPO REAL E VIGIA DE SINCRONIZAÇÃO
-    // =======================================================
-    function iniciarEscutaDoBanco() {
-        if(unsubscribeSnapshot) unsubscribeSnapshot();
-        
-        unsubscribeSnapshot = onSnapshot(colLancamentos, { includeMetadataChanges: true }, (snapshot) => {
-            bancoDeDados = [];
-            
-            // Vigia de Nuvem em Tempo Real
-            if (snapshot.metadata.hasPendingWrites) {
-                statusSync.innerText = '🟡 Aguardando Nuvem...';
-                statusSync.className = 'text-xs font-bold text-yellow-500';
-            } else {
-                statusSync.innerText = '🟢 Nuvem Atualizada';
-                statusSync.className = 'text-xs font-bold text-green-500';
-            }
-
-            snapshot.forEach((docRef) => { bancoDeDados.push({ id: docRef.id, ...docRef.data() }); });
-            atualizarTela();
-            
-        }, (erro) => {
-            console.error("Falha ao ler o banco:", erro);
-        });
-    }
-
     // LÓGICA DE INTERFACE
+    // =======================================================
     const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
 
     function configurarFiltrosIniciais() {
@@ -380,21 +388,37 @@
         limparFormulario();
     }
 
-    window.marcarConcluido = function(id) {
+    window.marcarConcluido = async function(id) {
         if(!auth.currentUser) return;
-        const lancamento = bancoDeDados.find(item => item.id === id);
-        if (lancamento) {
-            const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
-            const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
-            updateDoc(docRef, { status: novoStatus });
+        statusSync.innerText = '🟡 Atualizando...';
+        statusSync.className = 'text-xs font-bold text-yellow-500';
+        try {
+            const lancamento = bancoDeDados.find(item => item.id === id);
+            if (lancamento) {
+                const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
+                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
+                await updateDoc(docRef, { status: novoStatus });
+                await carregarDadosDaNuvem();
+            }
+        } catch(e) {
+            statusSync.innerText = '🔴 Erro de Conexão';
+            statusSync.className = 'text-xs font-bold text-red-500';
         }
     };
 
-    window.deletar = function(id) {
+    window.deletar = async function(id) {
         if (!auth.currentUser) return;
         if (confirm("Deseja excluir definitivamente da nuvem?")) {
-            const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
-            deleteDoc(docRef);
+            statusSync.innerText = '🟡 Excluindo...';
+            statusSync.className = 'text-xs font-bold text-yellow-500';
+            try {
+                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
+                await deleteDoc(docRef);
+                await carregarDadosDaNuvem();
+            } catch(e) {
+                statusSync.innerText = '🔴 Erro de Conexão';
+                statusSync.className = 'text-xs font-bold text-red-500';
+            }
         }
     };
 
