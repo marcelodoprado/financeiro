@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         body { font-family: 'Inter', sans-serif; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -24,16 +25,29 @@
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .animar-entrada { animation: fadeInDown 0.5s ease-out forwards; }
         
+        /* Zebrado Nativo para a Tela (Modo Escuro) */
+        #tabela-corpo tr:nth-child(even) { background-color: rgba(31, 41, 55, 0.5); }
+        #tabela-corpo tr:nth-child(odd) { background-color: transparent; }
+
+        /* MAGIA DO PDF: Força a Impressão das Cores e Zebrado Claro */
         @media print {
+            * { 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
             body { background-color: white !important; color: black !important; }
             .print-ocultar { display: none !important; }
             .text-white, .text-gray-400, .text-gray-200 { color: black !important; }
             .bg-gray-800, .bg-gray-900 { background-color: white !important; border: none !important; }
+            
             table { width: 100%; border-collapse: collapse; }
             th, td { border: 1px solid #d1d5db !important; padding: 8px !important; }
-            th { background-color: #e5e7eb !important; font-weight: bold !important; color: black !important; }
-            tbody tr:nth-child(even) td { background-color: #f9fafb !important; }
-            tbody tr:nth-child(odd) td { background-color: #ffffff !important; }
+            th { background-color: #e5e7eb !important; font-weight: bold !important; color: black !important; border-bottom: 2px solid #9ca3af !important; }
+            
+            /* Zebrado para o PDF */
+            #tabela-corpo tr:nth-child(even) td { background-color: #f3f4f6 !important; }
+            #tabela-corpo tr:nth-child(odd) td { background-color: #ffffff !important; }
+            
             #titulo-impressao { display: inline !important; }
         }
     </style>
@@ -48,9 +62,7 @@
         <form id="form-autenticacao" onsubmit="event.preventDefault();">
             <input type="email" id="email-login" autocomplete="username" placeholder="E-mail" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
             <input type="password" id="senha-login" autocomplete="current-password" placeholder="Senha" class="w-full mb-2 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
-            
             <button type="button" id="btn-esqueci-senha" class="text-sm text-blue-400 hover:text-blue-300 mb-4 block text-right w-full">Esqueci minha senha</button>
-            
             <button type="submit" id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded transition-colors mb-4 shadow-lg">Entrar no Sistema</button>
         </form>
         
@@ -102,17 +114,9 @@
         
         <div class="flex items-center gap-3 print-ocultar flex-wrap justify-center">
             <button id="btn-voltar-hoje" class="text-gray-400 hover:text-white transition-colors p-2 bg-gray-800 border border-gray-700 rounded" title="Mês atual">
-                <!-- Ícone da Casinha Corrigido -->
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                    <polyline stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="9 22 9 12 15 12 15 22"></polyline>
-                </svg>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="9 22 9 12 15 12 15 22"></polyline></svg>
             </button>
-            <select id="filtro-mes" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:outline-none text-sm font-medium">
-                <option value="01">Janeiro</option> <option value="02">Fevereiro</option> <option value="03">Março</option> <option value="04">Abril</option>
-                <option value="05">Maio</option> <option value="06">Junho</option> <option value="07">Julho</option> <option value="08">Agosto</option>
-                <option value="09">Setembro</option> <option value="10">Outubro</option> <option value="11">Novembro</option> <option value="12">Dezembro</option>
-            </select>
+            <select id="filtro-mes" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:outline-none text-sm font-medium"></select>
             <select id="filtro-ano" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:outline-none text-sm font-medium"></select>
             <button onclick="window.print()" class="bg-gray-200 hover:bg-white text-gray-900 font-bold py-2 px-4 rounded text-sm">Gerar PDF</button>
         </div>
@@ -139,10 +143,20 @@
             <div><label class="block text-xs text-gray-400 uppercase mb-1">Status</label><select id="status" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="Pendente">Pendente</option><option value="Pago">Pago</option></select></div>
             <div><label class="block text-xs text-gray-400 uppercase mb-1">Data</label><input type="date" id="data" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
             <div><label class="block text-xs text-gray-400 uppercase mb-1">Valor (R$)</label><input type="number" id="valor" step="0.01" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
+            
             <div id="box-repeticao"><label class="block text-xs text-gray-400 uppercase mb-1">Repetição</label><select id="repeticao" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="unico">Único</option><option value="mensal">Fixo (Até Dez)</option><option value="parcelado">Parcelado</option></select></div>
             <div id="box-parcelas" class="hidden"><label class="block text-xs text-gray-400 uppercase mb-1">Qtd. Parcelas</label><input type="number" id="qtd_parcelas" min="2" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
+            
+            <!-- CAIXA DE EDIÇÃO EM CASCATA -->
+            <div id="box-editar-futuros" class="hidden md:col-span-4 mt-2 bg-blue-900/30 border border-blue-800 p-3 rounded">
+                <label class="flex items-center space-x-2 text-sm text-blue-300 cursor-pointer">
+                    <input type="checkbox" id="aplicar-futuros" class="form-checkbox h-4 w-4 text-blue-600 rounded bg-gray-900 border-gray-700">
+                    <span>Aplicar esse novo valor e nome a todas as faturas futuras desta mesma conta.</span>
+                </label>
+            </div>
+
             <div class="md:col-span-4 flex justify-end gap-2 mt-2">
-                <button id="btn-cancelar-edicao" class="hidden bg-gray-700 text-white py-2 px-4 rounded font-medium">Cancelar</button>
+                <button id="btn-cancelar-edicao" class="hidden bg-gray-700 text-white py-2 px-4 rounded font-medium transition-colors hover:bg-gray-600">Cancelar</button>
                 <button id="btn-salvar" class="bg-gray-200 text-gray-900 font-bold py-2 px-6 rounded transition-colors hover:bg-white">Salvar na Nuvem</button>
             </div>
         </div>
@@ -163,6 +177,7 @@
     // =======================================================
     // 1. INICIALIZAÇÃO DO SUPABASE
     // =======================================================
+    // ATENÇÃO: COLOQUE SUAS CHAVES AQUI
     const supabaseUrl = 'https://kbsvasopeephsdkqidkm.supabase.co'; 
     const supabaseKey = 'sb_publishable_2ok-D1CZ-wigS-gCGPU0Aw_6IH4j94n';
     
@@ -170,6 +185,7 @@
     
     let bancoDeDados = [];
     let idEditando = null;
+    let lancamentoOriginalEditando = null; // Guarda os dados originais para edição em cascata
     let confeteJaDisparadoMeseAno = "";
     let currentUser = null;
     
@@ -178,8 +194,15 @@
     const statusSync = document.getElementById('status-sincronizacao');
     const msgErro = document.getElementById('msg-erro');
 
+    function mostrarMensagemTemporaria(elemento, texto, corClass = 'text-red-400') {
+        elemento.innerText = texto;
+        elemento.className = `text-center text-sm mb-4 block ${corClass}`;
+        elemento.classList.remove('hidden');
+        setTimeout(() => { elemento.classList.add('hidden'); }, 4000);
+    }
+
     // =======================================================
-    // 2. SISTEMA DE LOGIN E REGISTRO SUPABASE
+    // 2. SISTEMA DE LOGIN E RECUPERAÇÃO DE SENHA
     // =======================================================
     let modoRegistro = false;
     document.getElementById('btn-alternar-registro').addEventListener('click', () => {
@@ -207,20 +230,16 @@
             }
             if (error) throw error;
         } catch (e) {
-            msgErro.innerText = "Falha no acesso: Verifique e-mail e senha.";
-            msgErro.classList.remove('hidden');
+            mostrarMensagemTemporaria(msgErro, "Falha no acesso: Verifique e-mail e senha.");
         }
     });
 
-    document.getElementById('btn-sair').addEventListener('click', async () => {
-        await clienteSupabase.auth.signOut();
-    });
+    document.getElementById('btn-sair').addEventListener('click', async () => { await clienteSupabase.auth.signOut(); });
 
-    // =======================================================
-    // SISTEMA DE RECUPERAÇÃO DE SENHA
-    // =======================================================
+    // Modais de Senha
     const modalRecuperar = document.getElementById('modal-recuperar');
     const modalNovaSenha = document.getElementById('modal-nova-senha');
+    const msgRecuperar = document.getElementById('msg-recuperar');
     
     document.getElementById('btn-esqueci-senha').addEventListener('click', () => {
         modalRecuperar.classList.remove('hidden');
@@ -229,22 +248,16 @@
 
     document.getElementById('btn-fechar-recuperar').addEventListener('click', () => {
         modalRecuperar.classList.add('hidden');
-        document.getElementById('msg-recuperar').classList.add('hidden');
+        msgRecuperar.classList.add('hidden');
     });
 
     document.getElementById('btn-enviar-link').addEventListener('click', async () => {
         const email = document.getElementById('email-recuperar').value;
         if (!email) return alert("Digite seu e-mail.");
         
-        const { error } = await clienteSupabase.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.href
-        });
-
-        if (error) {
-            alert("Erro ao enviar: " + error.message);
-        } else {
-            document.getElementById('msg-recuperar').classList.remove('hidden');
-        }
+        const { error } = await clienteSupabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+        if (error) mostrarMensagemTemporaria(msgRecuperar, "Erro ao enviar: " + error.message, 'text-red-400');
+        else mostrarMensagemTemporaria(msgRecuperar, "Link enviado! Verifique sua caixa de entrada e spam.", 'text-green-400');
     });
 
     document.getElementById('btn-salvar-nova-senha').addEventListener('click', async () => {
@@ -252,30 +265,18 @@
         if (novaSenha.length < 6) return alert("A senha deve ter no mínimo 6 caracteres.");
 
         const msgTexto = document.getElementById('msg-nova-senha');
-        msgTexto.innerText = "Salvando...";
-        msgTexto.className = "text-center text-sm mt-2 text-yellow-400 block";
+        mostrarMensagemTemporaria(msgTexto, "Salvando...", 'text-yellow-400');
 
         const { error } = await clienteSupabase.auth.updateUser({ password: novaSenha });
-
-        if (error) {
-            msgTexto.innerText = "Erro: " + error.message;
-            msgTexto.className = "text-center text-sm mt-2 text-red-400 block";
-        } else {
-            msgTexto.innerText = "Senha atualizada com sucesso!";
-            msgTexto.className = "text-center text-sm mt-2 text-green-400 block";
-            setTimeout(() => {
-                modalNovaSenha.classList.add('hidden');
-            }, 2000);
+        if (error) mostrarMensagemTemporaria(msgTexto, "Erro: " + error.message, 'text-red-400');
+        else {
+            mostrarMensagemTemporaria(msgTexto, "Senha atualizada com sucesso!", 'text-green-400');
+            setTimeout(() => { modalNovaSenha.classList.add('hidden'); }, 2000);
         }
     });
 
-    // =======================================================
-    // OBSERVADOR DE SESSÃO
-    // =======================================================
     clienteSupabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'PASSWORD_RECOVERY') {
-            modalNovaSenha.classList.remove('hidden');
-        }
+        if (event === 'PASSWORD_RECOVERY') modalNovaSenha.classList.remove('hidden');
 
         if (session && session.user) {
             currentUser = session.user;
@@ -297,19 +298,14 @@
     // =======================================================
     async function carregarDadosDaNuvem() {
         if (!currentUser) return;
-        statusSync.innerText = '🟡 Baixando Supabase...';
+        statusSync.innerText = '🟡 Baixando...';
         statusSync.className = 'text-xs font-bold text-yellow-500';
         
         try {
-            const { data, error } = await clienteSupabase
-                .from('lancamentos')
-                .select('*')
-                .eq('user_id', currentUser.id); 
-                
+            const { data, error } = await clienteSupabase.from('lancamentos').select('*').eq('user_id', currentUser.id); 
             if (error) throw error;
-            
             bancoDeDados = data || [];
-            statusSync.innerText = '🟢 Nuvem Atualizada';
+            statusSync.innerText = '🟢 Online';
             statusSync.className = 'text-xs font-bold text-green-500';
             atualizarTela();
         } catch (erro) {
@@ -335,6 +331,7 @@
 
         try {
             if (idEditando === null) {
+                // NOVO LANÇAMENTO
                 let limiteLoop = 1;
                 const dataBase = new Date(data + 'T12:00:00'); 
                 
@@ -352,11 +349,35 @@
                     if (error) throw error;
                 }
             } else {
-                const { error } = await clienteSupabase.from('lancamentos')
-                    .update({ desc, tipo, status, data, valor })
-                    .eq('id', idEditando)
-                    .eq('user_id', currentUser.id); 
-                if (error) throw error;
+                // ATUALIZANDO LANÇAMENTO EXISTENTE
+                const aplicarFuturos = document.getElementById('aplicar-futuros').checked;
+                
+                if (aplicarFuturos && lancamentoOriginalEditando) {
+                    // Edição em Cascata
+                    const dataOriginal = new Date(lancamentoOriginalEditando.data);
+                    
+                    // Acha todos os lançamentos que têm a mesma descrição original e datas à frente
+                    const contasFuturas = bancoDeDados.filter(c => 
+                        c.desc === lancamentoOriginalEditando.desc && 
+                        new Date(c.data) >= dataOriginal
+                    );
+
+                    for (let conta of contasFuturas) {
+                        // Mantém a data de cada um, atualiza o resto
+                        const { error } = await clienteSupabase.from('lancamentos')
+                            .update({ desc: desc, tipo: tipo, valor: valor })
+                            .eq('id', conta.id)
+                            .eq('user_id', currentUser.id);
+                        if (error) throw error;
+                    }
+                } else {
+                    // Edição Normal (Apenas um)
+                    const { error } = await clienteSupabase.from('lancamentos')
+                        .update({ desc, tipo, status, data, valor })
+                        .eq('id', idEditando)
+                        .eq('user_id', currentUser.id); 
+                    if (error) throw error;
+                }
                 cancelarEdicao();
             }
             
@@ -386,7 +407,7 @@
     };
 
     window.deletar = async function(id) {
-        if (confirm("Deseja excluir definitivamente do Supabase?")) {
+        if (confirm("Deseja excluir definitivamente do banco de dados?")) {
             statusSync.innerText = '🟡 Apagando...';
             try {
                 const { error } = await clienteSupabase.from('lancamentos')
@@ -399,7 +420,7 @@
     };
 
     // =======================================================
-    // INTERFACE E EVENTOS SECUNDÁRIOS
+    // 4. LÓGICA DE INTERFACE
     // =======================================================
     document.getElementById('btn-cancelar-edicao').addEventListener('click', cancelarEdicao);
     document.getElementById('filtro-mes').addEventListener('change', atualizarTela);
@@ -442,14 +463,23 @@
     window.prepararEdicao = function(id) {
         const lancamento = bancoDeDados.find(item => item.id === id);
         if (!lancamento) return;
+        
+        // Guarda os dados de quem estamos editando para a lógica de cascata
+        lancamentoOriginalEditando = { ...lancamento };
+        
         document.getElementById('desc').value = lancamento.desc; 
         document.getElementById('tipo').value = lancamento.tipo;
         document.getElementById('tipo').dispatchEvent(new Event('change'));
         document.getElementById('status').value = lancamento.status;
         document.getElementById('data').value = lancamento.data; 
         document.getElementById('valor').value = lancamento.valor;
+        
+        // Esconde a criação de repetição, mostra a edição de repetição
         document.getElementById('box-repeticao').classList.add('hidden'); 
         document.getElementById('box-parcelas').classList.add('hidden');
+        document.getElementById('box-editar-futuros').classList.remove('hidden');
+        document.getElementById('aplicar-futuros').checked = false; // Desmarcado por padrão
+        
         idEditando = id;
         document.getElementById('titulo-formulario').innerText = "Editando Lançamento"; 
         document.getElementById('titulo-formulario').classList.add('text-yellow-500');
@@ -460,7 +490,9 @@
 
     function cancelarEdicao() {
         idEditando = null;
+        lancamentoOriginalEditando = null;
         document.getElementById('box-repeticao').classList.remove('hidden');
+        document.getElementById('box-editar-futuros').classList.add('hidden');
         document.getElementById('titulo-formulario').innerText = "Novo Lançamento"; 
         document.getElementById('titulo-formulario').classList.remove('text-yellow-500');
         document.getElementById('btn-salvar').innerText = "Salvar na Nuvem"; 
@@ -484,6 +516,9 @@
         const fAno = document.getElementById('filtro-ano').value;
         const corpoTabela = document.getElementById('tabela-corpo');
         corpoTabela.innerHTML = ''; 
+        
+        // Mantém a data de impressão atualizada com o filtro atual
+        document.getElementById('titulo-impressao').innerText = `- ${nomeMeses[fMes]} de ${fAno}`;
 
         const dadosFiltrados = bancoDeDados.filter(conta => conta.data && conta.data.substring(0, 4) === fAno && conta.data.substring(5, 7) === fMes);
         dadosFiltrados.sort((a, b) => new Date(a.data) - new Date(b.data));
@@ -491,7 +526,7 @@
         let totReceber = 0, totPagar = 0, totRecebido = 0, totPago = 0;
         let qtdeContasPagar = 0, qtdeContasPagas = 0;
 
-        dadosFiltrados.forEach((conta, index) => {
+        dadosFiltrados.forEach((conta) => {
             if (conta.tipo === 'Receber' && conta.status === 'Pendente') totReceber += conta.valor;
             if (conta.tipo === 'Pagar' && conta.status === 'Pendente') totPagar += conta.valor;
             if (conta.status === 'Recebido') totRecebido += conta.valor;
@@ -505,8 +540,10 @@
 
             let btnBaixa = conta.status === 'Pendente' ? `<button onclick="marcarConcluido('${conta.id}')" class="text-gray-400 hover:text-white px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors mr-1">✔ Baixa</button>` : '';
 
+            // Note que removi a lógica de zebrado embutida aqui, deixamos apenas a classe "hover" e a transição.
+            // O CSS agora faz o trabalho pesado de zebrar a tabela perfeitamente.
             corpoTabela.innerHTML += `
-                <tr class="hover:bg-gray-750 transition-colors ${index % 2 === 0 ? "bg-gray-800/30" : "bg-transparent"}">
+                <tr class="hover:bg-gray-750 transition-colors">
                     <td class="px-4 py-3 whitespace-nowrap text-gray-400">${formatarData(conta.data)}</td>
                     <td class="px-4 py-3 font-medium text-gray-200">${conta.desc}</td>
                     <td class="px-4 py-3 text-gray-400">${conta.tipo === 'Pagar' ? 'Saída' : 'Entrada'}</td>
