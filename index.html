@@ -9,8 +9,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
+    <!-- A linha abaixo religa o seu PWA para instalação no celular -->
+    <link rel="manifest" href="manifest.json">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -54,15 +58,6 @@
         <div class="text-center mb-6">
             <button id="btn-alternar-registro" class="text-gray-400 hover:text-white text-sm transition-colors underline decoration-gray-600 underline-offset-4">Não tem conta? Registre-se</button>
         </div>
-
-        <div class="flex items-center justify-center gap-4 mb-6">
-            <div class="h-px bg-gray-700 w-full"></div><span class="text-gray-500 text-sm">OU</span><div class="h-px bg-gray-700 w-full"></div>
-        </div>
-
-        <button id="btn-google" class="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 px-4 rounded transition-colors">
-            <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-            Entrar com Google
-        </button>
     </div>
 </div>
 
@@ -76,8 +71,7 @@
                 <div class="flex items-center gap-2 mt-1 print-ocultar">
                     <p id="usuario-logado" class="text-xs text-blue-400"></p>
                     <span class="text-gray-600 text-xs">|</span>
-                    <!-- SEMÁFORO DE SINCRONIZAÇÃO MANTIDO -->
-                    <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando Nuvem...</p>
+                    <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando Supabase...</p>
                 </div>
             </div>
             <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
@@ -136,49 +130,118 @@
             <tbody id="tabela-corpo" class="divide-y divide-gray-700"></tbody>
         </table>
     </div>
-
 </div>
 
-<!-- JAVASCRIPT: ARQUITETURA PURA FIREBASE CDN -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+<script>
+    // =======================================================
+    // 1. INICIALIZAÇÃO DO SUPABASE (A Nova Infraestrutura)
+    // =======================================================
     
-    // A Importação da Ferramenta de Conexão Estável
-    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-
-    // Suas chaves nativas validadas
-    const firebaseConfig = {
-      apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
-      authDomain: "financeiro-cd95f.firebaseapp.com",
-      projectId: "financeiro-cd95f",
-      storageBucket: "financeiro-cd95f.firebasestorage.app",
-      messagingSenderId: "14408523133",
-      appId: "1:14408523133:web:3d5c840411315dffcc8014"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    // ATENÇÃO: SUBSTITUA OS VALORES ABAIXO PELAS SUAS CHAVES REAIS.
+    // Mantenha as aspas simples ('') envolvendo o texto da chave.
     
-    // A GRANDE ALTERAÇÃO: Removido o experimentalForceLongPolling que engasgava no WebChannel.
-    // Agora o aplicativo utiliza WebSockets Nativos, muito mais limpos e velozes.
-    const db = getFirestore(app); 
+    const supabaseUrl = 'https://kbsvasopeephsdkqidkm.supabase.co'; 
+    const supabaseKey = 'sb_publishable_2ok-D1CZ-wigS-gCGPU0Aw_6IH4j94n';
     
-    let colLancamentos = null;
-    let unsubscribeSnapshot = null; 
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    
     let bancoDeDados = [];
     let idEditando = null;
-    let confeteJaDisparadoMeseAno = ""; 
+    let confeteJaDisparadoMeseAno = "";
+    let currentUser = null;
     
     const telaLogin = document.getElementById('tela-login');
     const appPrincipal = document.getElementById('app-principal');
     const statusSync = document.getElementById('status-sincronizacao');
+    const msgErro = document.getElementById('msg-erro');
 
-    // -----------------------------------------------------
-    // SALVAMENTO PROFISSIONAL
-    // -----------------------------------------------------
+    // =======================================================
+    // 2. SISTEMA DE LOGIN E REGISTRO SUPABASE
+    // =======================================================
+    let modoRegistro = false;
+    document.getElementById('btn-alternar-registro').addEventListener('click', () => {
+        modoRegistro = !modoRegistro;
+        document.getElementById('titulo-login').innerText = modoRegistro ? "Criar Nova Conta" : "Acesso Seguro";
+        document.getElementById('btn-entrar').innerText = modoRegistro ? "Registrar-se" : "Entrar no Sistema";
+        document.getElementById('btn-alternar-registro').innerText = modoRegistro ? "Já tem uma conta? Entre" : "Não tem conta? Registre-se";
+        msgErro.classList.add('hidden');
+    });
+
+    document.getElementById('btn-entrar').addEventListener('click', async () => {
+        const email = document.getElementById('email-login').value;
+        const senha = document.getElementById('senha-login').value;
+        msgErro.classList.add('hidden');
+        
+        try {
+            let error = null;
+            if (modoRegistro) {
+                const result = await supabase.auth.signUp({ email, password: senha });
+                error = result.error;
+            } else {
+                const result = await supabase.auth.signInWithPassword({ email, password: senha });
+                error = result.error;
+            }
+
+            if (error) throw error;
+
+        } catch (e) {
+            msgErro.innerText = "Falha no acesso: Verifique e-mail e senha.";
+            msgErro.classList.remove('hidden');
+            console.error(e);
+        }
+    });
+
+    document.getElementById('btn-sair').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+    });
+
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (session && session.user) {
+            currentUser = session.user;
+            telaLogin.classList.add('hidden');
+            appPrincipal.classList.remove('hidden');
+            document.getElementById('usuario-logado').innerText = currentUser.email;
+            
+            configurarFiltrosIniciais(); 
+            carregarDadosDaNuvem(); 
+        } else {
+            currentUser = null;
+            appPrincipal.classList.add('hidden');
+            telaLogin.classList.remove('hidden');
+            bancoDeDados = []; 
+        }
+    });
+
+    // =======================================================
+    // 3. COMUNICAÇÃO DE DADOS REST (Imbloqueável)
+    // =======================================================
+    async function carregarDadosDaNuvem() {
+        if (!currentUser) return;
+        statusSync.innerText = '🟡 Baixando Supabase...';
+        statusSync.className = 'text-xs font-bold text-yellow-500';
+        
+        try {
+            const { data, error } = await supabase
+                .from('lancamentos')
+                .select('*')
+                .eq('user_id', currentUser.id); 
+                
+            if (error) throw error;
+            
+            bancoDeDados = data || [];
+            statusSync.innerText = '🟢 Nuvem Atualizada';
+            statusSync.className = 'text-xs font-bold text-green-500';
+            atualizarTela();
+            
+        } catch (erro) {
+            statusSync.innerText = '🔴 Erro de Rede';
+            statusSync.className = 'text-xs font-bold text-red-500';
+            console.error("Falha ao ler dados:", erro);
+        }
+    }
+
     document.getElementById('btn-salvar').addEventListener('click', async () => {
-        if(!colLancamentos) return alert("Sua sessão expirou. Faça login novamente."); 
+        if(!currentUser) return alert("Sua sessão expirou."); 
         
         const desc = document.getElementById('desc').value.trim();
         const tipo = document.getElementById('tipo').value;
@@ -189,7 +252,7 @@
 
         if (!desc || isNaN(valor) || !data) return alert("Preencha todos os campos obrigatórios.");
 
-        statusSync.innerText = '🟡 Salvando na Nuvem...';
+        statusSync.innerText = '🟡 Salvando Segurança Máxima...';
         statusSync.className = 'text-xs font-bold text-yellow-500';
 
         try {
@@ -205,31 +268,65 @@
                     novaData.setMonth(novaData.getMonth() + i);
                     let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
                     
-                    await addDoc(colLancamentos, {
-                        desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
-                    });
+                    const { error } = await supabase.from('lancamentos').insert([{ 
+                        user_id: currentUser.id, desc: descFinal, tipo, status, data: novaData.toISOString().split('T')[0], valor 
+                    }]);
+                    if (error) throw error;
                 }
             } else {
-                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
-                await updateDoc(docRef, { desc, tipo, status, data, valor });
+                const { error } = await supabase.from('lancamentos')
+                    .update({ desc, tipo, status, data, valor })
+                    .eq('id', idEditando)
+                    .eq('user_id', currentUser.id); 
+                if (error) throw error;
                 cancelarEdicao();
             }
             
             limparFormulario();
-            statusSync.innerText = '🟢 Salvo com Sucesso';
-            statusSync.className = 'text-xs font-bold text-green-500';
+            await carregarDadosDaNuvem();
             
         } catch (erro) {
-            statusSync.innerText = '🔴 Erro de Envio';
+            statusSync.innerText = '🔴 Erro ao Salvar';
             statusSync.className = 'text-xs font-bold text-red-500';
-            alert(`Falha de Conexão. O dado não foi salvo.\nErro Técnico: ${erro.message}`);
+            alert(`Falha no banco de dados. Erro: ${erro.message}`);
         }
     });
 
-    document.getElementById('btn-cancelar-edicao').addEventListener('click', () => cancelarEdicao());
+    window.marcarConcluido = async function(id) {
+        const lancamento = bancoDeDados.find(item => item.id === id);
+        if (lancamento) {
+            statusSync.innerText = '🟡 Atualizando...';
+            const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
+            try {
+                const { error } = await supabase.from('lancamentos')
+                    .update({ status: novoStatus })
+                    .eq('id', id).eq('user_id', currentUser.id);
+                if (error) throw error;
+                await carregarDadosDaNuvem();
+            } catch(e) { alert("Erro de conexão."); }
+        }
+    };
+
+    window.deletar = async function(id) {
+        if (confirm("Deseja excluir definitivamente do Supabase?")) {
+            statusSync.innerText = '🟡 Apagando...';
+            try {
+                const { error } = await supabase.from('lancamentos')
+                    .delete()
+                    .eq('id', id).eq('user_id', currentUser.id);
+                if (error) throw error;
+                await carregarDadosDaNuvem();
+            } catch(e) { alert("Erro de conexão."); }
+        }
+    };
+
+    // =======================================================
+    // 4. LÓGICA DE INTERFACE E EVENTOS SECUNDÁRIOS
+    // =======================================================
+    document.getElementById('btn-cancelar-edicao').addEventListener('click', cancelarEdicao);
     document.getElementById('filtro-mes').addEventListener('change', atualizarTela);
     document.getElementById('filtro-ano').addEventListener('change', atualizarTela);
-    document.getElementById('btn-voltar-hoje').addEventListener('click', () => voltarMesAtual());
+    document.getElementById('btn-voltar-hoje').addEventListener('click', voltarMesAtual);
     
     document.getElementById('tipo').addEventListener('change', () => {
         const tipo = document.getElementById('tipo').value;
@@ -240,84 +337,9 @@
 
     document.getElementById('repeticao').addEventListener('change', () => {
         const rep = document.getElementById('repeticao').value;
-        if (rep === 'parcelado') document.getElementById('box-parcelas').classList.remove('hidden');
-        else document.getElementById('box-parcelas').classList.add('hidden');
+        document.getElementById('box-parcelas').classList.toggle('hidden', rep !== 'parcelado');
     });
 
-    // -----------------------------------------------------
-    // SISTEMA DE AUTENTICAÇÃO E REGISTRO
-    // -----------------------------------------------------
-    let modoRegistro = false;
-    document.getElementById('btn-alternar-registro').addEventListener('click', () => {
-        modoRegistro = !modoRegistro;
-        document.getElementById('titulo-login').innerText = modoRegistro ? "Criar Nova Conta" : "Acesso Seguro";
-        document.getElementById('btn-entrar').innerText = modoRegistro ? "Registrar-se" : "Entrar no Sistema";
-        document.getElementById('btn-alternar-registro').innerText = modoRegistro ? "Já tem uma conta? Entre" : "Não tem conta? Registre-se";
-    });
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            telaLogin.classList.add('hidden');
-            appPrincipal.classList.remove('hidden');
-            document.getElementById('usuario-logado').innerText = user.email;
-            
-            colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
-            configurarFiltrosIniciais(); 
-            iniciarEscutaDoBanco();
-        } else {
-            appPrincipal.classList.add('hidden');
-            telaLogin.classList.remove('hidden');
-            if(unsubscribeSnapshot) unsubscribeSnapshot(); 
-            bancoDeDados = []; 
-        }
-    });
-
-    document.getElementById('btn-entrar').addEventListener('click', () => {
-        const email = document.getElementById('email-login').value;
-        const senha = document.getElementById('senha-login').value;
-        const msgErro = document.getElementById('msg-erro');
-        msgErro.classList.add('hidden');
-        
-        if (modoRegistro) {
-            createUserWithEmailAndPassword(auth, email, senha).catch(e => { msgErro.innerText = "Erro ao criar conta."; msgErro.classList.remove('hidden'); });
-        } else {
-            signInWithEmailAndPassword(auth, email, senha).catch(e => { msgErro.innerText = "E-mail ou senha incorretos."; msgErro.classList.remove('hidden'); });
-        }
-    });
-
-    const providerGoogle = new GoogleAuthProvider();
-    document.getElementById('btn-google').addEventListener('click', () => {
-        document.getElementById('msg-erro').classList.add('hidden');
-        signInWithPopup(auth, providerGoogle).catch((error) => console.error(error));
-    });
-
-    document.getElementById('btn-sair').addEventListener('click', () => signOut(auth));
-
-    // -----------------------------------------------------
-    // ESCUTA EM TEMPO REAL E SEMÁFORO
-    // -----------------------------------------------------
-    function iniciarEscutaDoBanco() {
-        if(unsubscribeSnapshot) unsubscribeSnapshot();
-        statusSync.innerText = '🟡 Conectando Nuvem...';
-        statusSync.className = 'text-xs font-bold text-yellow-500';
-
-        unsubscribeSnapshot = onSnapshot(colLancamentos, (snapshot) => {
-            bancoDeDados = [];
-            snapshot.forEach((docRef) => { bancoDeDados.push({ id: docRef.id, ...docRef.data() }); });
-            
-            statusSync.innerText = '🟢 Online e Atualizado';
-            statusSync.className = 'text-xs font-bold text-green-500';
-            atualizarTela();
-        }, (erro) => {
-            statusSync.innerText = '🔴 Desconectado';
-            statusSync.className = 'text-xs font-bold text-red-500';
-            console.error("Erro na leitura:", erro);
-        });
-    }
-
-    // -----------------------------------------------------
-    // FUNÇÕES DE TABELA E FORMULÁRIO
-    // -----------------------------------------------------
     const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
 
     function configurarFiltrosIniciais() {
@@ -326,12 +348,8 @@
         const selectMes = document.getElementById('filtro-mes');
         selectAno.innerHTML = ''; selectMes.innerHTML = '';
         
-        for (let i = hoje.getFullYear() - 1; i <= hoje.getFullYear() + 4; i++) {
-            selectAno.innerHTML += `<option value="${i}">${i}</option>`;
-        }
-        for (const [num, nome] of Object.entries(nomeMeses)) {
-            selectMes.innerHTML += `<option value="${num}">${nome}</option>`;
-        }
+        for (let i = hoje.getFullYear() - 1; i <= hoje.getFullYear() + 4; i++) { selectAno.innerHTML += `<option value="${i}">${i}</option>`; }
+        for (const [num, nome] of Object.entries(nomeMeses)) { selectMes.innerHTML += `<option value="${num}">${nome}</option>`; }
         voltarMesAtual(); 
     }
 
@@ -372,36 +390,6 @@
         limparFormulario();
     }
 
-    window.marcarConcluido = async function(id) {
-        if(!auth.currentUser) return;
-        statusSync.innerText = '🟡 Atualizando...';
-        statusSync.className = 'text-xs font-bold text-yellow-500';
-        try {
-            const lancamento = bancoDeDados.find(item => item.id === id);
-            if (lancamento) {
-                const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
-                await updateDoc(doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id), { status: novoStatus });
-            }
-        } catch (e) {
-            statusSync.innerText = '🔴 Erro de Conexão';
-            statusSync.className = 'text-xs font-bold text-red-500';
-        }
-    };
-
-    window.deletar = async function(id) {
-        if (!auth.currentUser) return;
-        if (confirm("Deseja excluir definitivamente da nuvem?")) {
-            statusSync.innerText = '🟡 Excluindo...';
-            statusSync.className = 'text-xs font-bold text-yellow-500';
-            try {
-                await deleteDoc(doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id));
-            } catch (e) {
-                statusSync.innerText = '🔴 Erro de Conexão';
-                statusSync.className = 'text-xs font-bold text-red-500';
-            }
-        }
-    };
-
     function limparFormulario() {
         document.getElementById('desc').value = ''; 
         document.getElementById('valor').value = '';
@@ -419,7 +407,7 @@
         const corpoTabela = document.getElementById('tabela-corpo');
         corpoTabela.innerHTML = ''; 
 
-        const dadosFiltrados = bancoDeDados.filter(conta => conta.data.substring(0, 4) === fAno && conta.data.substring(5, 7) === fMes);
+        const dadosFiltrados = bancoDeDados.filter(conta => conta.data && conta.data.substring(0, 4) === fAno && conta.data.substring(5, 7) === fMes);
         dadosFiltrados.sort((a, b) => new Date(a.data) - new Date(b.data));
 
         let totReceber = 0, totPagar = 0, totRecebido = 0, totPago = 0;
