@@ -133,32 +133,36 @@
     <!-- PAINEL DE DIAGNÓSTICO (VISÍVEL NA TELA)    -->
     <!-- ========================================== -->
     <div id="painel-diagnostico" class="bg-black text-green-400 font-mono text-[11px] p-4 rounded-lg h-48 overflow-y-auto border border-gray-600 print-ocultar">
-        <p class="text-gray-500 mb-2">>> SISTEMA INICIADO. AGUARDANDO COMANDOS...</p>
+        <p class="text-gray-500 mb-2">>> SISTEMA INICIADO. FORÇANDO CONEXÃO HTTP (LONG POLLING)...</p>
     </div>
 
 </div>
 
 <!-- JAVASCRIPT: FIREBASE E LÓGICA -->
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    
+    // ATENÇÃO AQUI: Importamos a função initializeFirestore
+    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-    // ==========================================
-    // COLE AS SUAS CHAVES DO FIREBASE AQUI
-    // ==========================================
+    // AS SUAS CHAVES PERFEITAMENTE COLADAS
     const firebaseConfig = {
-  apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
-  authDomain: "financeiro-cd95f.firebaseapp.com",
-  projectId: "financeiro-cd95f",
-  storageBucket: "financeiro-cd95f.firebasestorage.app",
-  messagingSenderId: "14408523133",
-  appId: "1:14408523133:web:3d5c840411315dffcc8014"
-};
+      apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
+      authDomain: "financeiro-cd95f.firebaseapp.com",
+      projectId: "financeiro-cd95f",
+      storageBucket: "financeiro-cd95f.firebasestorage.app",
+      messagingSenderId: "14408523133",
+      appId: "1:14408523133:web:3d5c840411315dffcc8014"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    
+    // A GRANDE CORREÇÃO: Forçando o Long Polling para contornar o bloqueio de rede
+    const db = initializeFirestore(app, {
+        experimentalForceLongPolling: true
+    });
     
     let colLancamentos = null;
     let unsubscribeSnapshot = null; 
@@ -177,7 +181,6 @@
         const p = document.createElement('p');
         p.className = isErro ? 'text-red-500 font-bold mb-1' : 'mb-1';
         
-        // Se for um objeto de erro, tenta extrair a mensagem
         if (typeof mensagem === 'object') {
             p.innerText = ">> " + (mensagem.message || JSON.stringify(mensagem));
         } else {
@@ -185,7 +188,7 @@
         }
         
         painel.appendChild(p);
-        painel.scrollTop = painel.scrollHeight; // Rola para o final automaticamente
+        painel.scrollTop = painel.scrollHeight; 
     };
 
     // SISTEMA DE LOGIN E REGISTRO
@@ -209,7 +212,6 @@
             appPrincipal.classList.remove('hidden');
             document.getElementById('usuario-logado').innerText = `Logado como: ${user.email}`;
             
-            // Define o caminho no banco de dados
             colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
             window.logNaTela(`Autenticado com sucesso. ID do usuário: ${user.uid}`);
             window.logNaTela(`Caminho do banco configurado: usuarios/${user.uid}/lancamentos`);
@@ -343,7 +345,7 @@
                 if (repeticao === 'mensal') limiteLoop = 12 - dataBase.getMonth();
                 if (repeticao === 'parcelado') limiteLoop = parseInt(document.getElementById('qtd_parcelas').value) || 1;
 
-                window.logNaTela(`Preparando para gravar ${limiteLoop} documento(s) no Firestore...`);
+                window.logNaTela(`Preparando para gravar ${limiteLoop} documento(s) no Firestore usando Long Polling...`);
 
                 for (let i = 0; i < limiteLoop; i++) {
                     const novaData = new Date(dataBase);
@@ -363,7 +365,7 @@
                 window.cancelarEdicao();
             }
             limparFormulario();
-            window.logNaTela("Rotina concluída! O onSnapshot atualizará a tela.");
+            window.logNaTela("Rotina concluída com sucesso! Os dados estão na nuvem.");
         } catch (erro) {
             window.logNaTela("FALHA CATASTRÓFICA AO SALVAR:", true);
             window.logNaTela(erro, true);
