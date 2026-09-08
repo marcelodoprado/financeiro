@@ -70,7 +70,12 @@
         <div class="flex items-center gap-4 w-full md:w-auto justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-white tracking-wide">FINANÇAS <span id="titulo-impressao" class="hidden text-lg font-normal ml-2"></span></h1>
-                <p id="usuario-logado" class="text-xs text-blue-400 print-ocultar"></p>
+                <div class="flex items-center gap-2 mt-1 print-ocultar">
+                    <p id="usuario-logado" class="text-xs text-blue-400"></p>
+                    <span class="text-gray-600 text-xs">|</span>
+                    <!-- O NOSSO NOVO SEMÁFORO DE SINCRONIZAÇÃO -->
+                    <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando...</p>
+                </div>
             </div>
             <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
         </div>
@@ -88,6 +93,10 @@
             <button onclick="window.print()" class="bg-gray-200 hover:bg-white text-gray-900 font-bold py-2 px-4 rounded text-sm">Gerar PDF</button>
         </div>
     </header>
+
+    <div id="painel-sucesso" class="hidden animar-entrada bg-green-900/40 border border-green-500 text-green-300 p-4 rounded-lg mb-8 text-center print-ocultar">
+        🎉 <strong>Mês Quitado!</strong> Excelente trabalho, você pagou todas as contas registradas!
+    </div>
 
     <!-- Dashboard -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -125,11 +134,6 @@
         </table>
     </div>
 
-    <!-- PAINEL DE DIAGNÓSTICO -->
-    <div id="painel-diagnostico" class="bg-black text-green-400 font-mono text-[11px] p-4 rounded-lg h-48 overflow-y-auto border border-gray-600 print-ocultar">
-        <p class="text-gray-500 mb-2">>> SISTEMA INICIADO COM PERSISTÊNCIA OFFLINE (V11). AGUARDANDO...</p>
-    </div>
-
 </div>
 
 <!-- JAVASCRIPT: FIREBASE E LÓGICA (SDK Versão 10.13.0) -->
@@ -137,7 +141,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     
-    // ATENÇÃO: Importamos ferramentas para funcionamento Offline
+    // Importamos o pacote completo para suporte Offline
     import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
     // =======================================================
@@ -155,8 +159,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     
-    // O SEGREDO MÁGICO: Ativando Cache Local (Offline). 
-    // Mesmo sem internet, ele salva no seu celular e envia quando tiver sinal!
+    // Configuração Robusta com Cache Local Ativado
     const db = initializeFirestore(app, {
         localCache: persistentLocalCache({tabManager: persistentSingleTabManager()}),
         experimentalForceLongPolling: true
@@ -167,29 +170,19 @@
 
     let bancoDeDados = [];
     let idEditando = null;
+    let confeteJaDisparadoMeseAno = ""; 
     
     const telaLogin = document.getElementById('tela-login');
     const appPrincipal = document.getElementById('app-principal');
     const msgErro = document.getElementById('msg-erro');
-    
-    window.logNaTela = function(mensagem, isErro = false) {
-        const painel = document.getElementById('painel-diagnostico');
-        const p = document.createElement('p');
-        p.className = isErro ? 'text-red-500 font-bold mb-1' : 'mb-1';
-        p.innerText = ">> " + (mensagem.message || JSON.stringify(mensagem) || mensagem);
-        painel.appendChild(p);
-        painel.scrollTop = painel.scrollHeight; 
-    };
+    const statusSync = document.getElementById('status-sincronizacao');
 
     // =======================================================
-    // CONECTANDO OS BOTÕES
+    // CONECTANDO OS BOTÕES (Ações de Tela)
     // =======================================================
     document.getElementById('btn-salvar').addEventListener('click', () => {
-        window.logNaTela("-----------------------------");
-        window.logNaTela("Salvando lançamento...");
-        
         if(!colLancamentos) { 
-            alert("Usuário não validado."); return; 
+            alert("Sua sessão expirou. Faça login novamente."); return; 
         }
         
         const desc = document.getElementById('desc').value.trim();
@@ -200,7 +193,7 @@
         const repeticao = document.getElementById('repeticao').value;
 
         if (!desc || isNaN(valor) || valor <= 0 || !data) { 
-            alert("Preencha todos os campos obrigatórios."); return; 
+            alert("Preencha todos os campos obrigatórios (Descrição, Data e Valor)."); return; 
         }
 
         try {
@@ -216,10 +209,10 @@
                     novaData.setMonth(novaData.getMonth() + i);
                     let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
                     
-                    // NOTE: Removemos o "await". Ele processa instantâneo e joga pra nuvem no fundo!
+                    // Salvamento assíncrono transparente (Não trava a tela)
                     addDoc(colLancamentos, {
                         desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
-                    }).catch(e => window.logNaTela("Sincronização em background pendente...", false));
+                    }).catch(e => console.error("Aguardando rede para enviar..."));
                 }
             } else {
                 const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
@@ -227,10 +220,8 @@
                 cancelarEdicao();
             }
             limparFormulario();
-            window.logNaTela("Processado! A tabela foi atualizada.");
         } catch (erro) {
-            window.logNaTela("FALHA AO PROCESSAR:", true);
-            window.logNaTela(erro, true);
+            alert("Erro interno: " + erro.message);
         }
     });
 
@@ -252,7 +243,9 @@
         else document.getElementById('box-parcelas').classList.add('hidden');
     });
 
+    // =======================================================
     // SISTEMA DE LOGIN E REGISTRO
+    // =======================================================
     let modoRegistro = false;
     document.getElementById('btn-alternar-registro').addEventListener('click', () => {
         modoRegistro = !modoRegistro;
@@ -271,11 +264,9 @@
         if (user) {
             telaLogin.classList.add('hidden');
             appPrincipal.classList.remove('hidden');
-            document.getElementById('usuario-logado').innerText = `Logado como: ${user.email}`;
+            document.getElementById('usuario-logado').innerText = `${user.email}`;
             
             colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
-            window.logNaTela(`Autenticado. ID: ${user.uid}`);
-            
             configurarFiltrosIniciais(); 
             iniciarEscutaDoBanco();
         } else {
@@ -313,24 +304,34 @@
         else msgErro.innerText = "Ocorreu um erro. Tente novamente.";
     }
 
-    // CONEXÃO EM TEMPO REAL
+    // =======================================================
+    // CONEXÃO EM TEMPO REAL E VIGIA DE SINCRONIZAÇÃO
+    // =======================================================
     function iniciarEscutaDoBanco() {
         if(unsubscribeSnapshot) unsubscribeSnapshot();
-        try {
-            unsubscribeSnapshot = onSnapshot(colLancamentos, { includeMetadataChanges: true }, (snapshot) => {
-                bancoDeDados = [];
-                snapshot.forEach((docRef) => { bancoDeDados.push({ id: docRef.id, ...docRef.data() }); });
-                window.logNaTela(`Base carregada: ${bancoDeDados.length} itens (Fonte: ${snapshot.metadata.fromCache ? 'Local/Offline' : 'Nuvem'}).`);
-                atualizarTela();
-            }, (erro) => {
-                window.logNaTela("FALHA AO LER O BANCO DE DADOS!", true);
-            });
-        } catch (error) {
-            window.logNaTela("ERRO INTERNO NA ESCUTA:", true);
-        }
+        
+        // includeMetadataChanges permite que o app saiba se a conta tá só no celular ou já foi pra nuvem
+        unsubscribeSnapshot = onSnapshot(colLancamentos, { includeMetadataChanges: true }, (snapshot) => {
+            bancoDeDados = [];
+            
+            // Verifica o semáforo de sincronização
+            if (snapshot.metadata.hasPendingWrites) {
+                statusSync.innerText = '🟡 Aguardando Nuvem...';
+                statusSync.className = 'text-xs font-bold text-yellow-500';
+            } else {
+                statusSync.innerText = '🟢 Nuvem Atualizada';
+                statusSync.className = 'text-xs font-bold text-green-500';
+            }
+
+            snapshot.forEach((docRef) => { bancoDeDados.push({ id: docRef.id, ...docRef.data() }); });
+            atualizarTela();
+            
+        }, (erro) => {
+            console.error("Falha ao ler o banco:", erro);
+        });
     }
 
-    // LÓGICA DO APLICATIVO
+    // LÓGICA DE INTERFACE
     const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
 
     function configurarFiltrosIniciais() {
@@ -412,6 +413,7 @@
         corpoTabela.innerHTML = ''; 
 
         const fMes = document.getElementById('filtro-mes').value; const fAno = document.getElementById('filtro-ano').value;
+        const controleMesAno = `${fMes}-${fAno}`;
         document.getElementById('titulo-impressao').innerText = `- ${nomeMeses[fMes]} de ${fAno}`;
 
         const dadosFiltrados = bancoDeDados.filter(conta => {
@@ -422,12 +424,15 @@
         dadosFiltrados.sort((a, b) => new Date(a.data) - new Date(b.data));
 
         let totReceber = 0, totPagar = 0, totRecebido = 0, totPago = 0;
+        let qtdeContasPagar = 0, qtdeContasPagas = 0;
 
         dadosFiltrados.forEach((conta, index) => {
             if (conta.tipo === 'Receber' && conta.status === 'Pendente') totReceber += conta.valor;
             if (conta.tipo === 'Pagar' && conta.status === 'Pendente') totPagar += conta.valor;
             if (conta.status === 'Recebido') totRecebido += conta.valor;
             if (conta.status === 'Pago') totPago += conta.valor;
+
+            if (conta.tipo === 'Pagar') { qtdeContasPagar++; if (conta.status === 'Pago') qtdeContasPagas++; }
 
             let badgeClass = "bg-gray-700 text-gray-300 border-gray-600"; 
             if (conta.status === 'Pago') badgeClass = "bg-green-900/50 text-green-400 border-green-800"; 
@@ -458,6 +463,12 @@
         });
 
         if (dadosFiltrados.length === 0) corpoTabela.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhum lançamento encontrado neste mês.</td></tr>`;
+
+        const painelSucesso = document.getElementById('painel-sucesso');
+        if (qtdeContasPagar > 0 && qtdeContasPagar === qtdeContasPagas) {
+            painelSucesso.classList.remove('hidden');
+            if (confeteJaDisparadoMeseAno !== controleMesAno) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); confeteJaDisparadoMeseAno = controleMesAno; }
+        } else { painelSucesso.classList.add('hidden'); }
 
         document.getElementById('dash-receber').innerText = `R$ ${totReceber.toFixed(2).replace('.', ',')}`; document.getElementById('dash-pagar').innerText = `R$ ${totPagar.toFixed(2).replace('.', ',')}`;
         document.getElementById('dash-recebido').innerText = `R$ ${totRecebido.toFixed(2).replace('.', ',')}`;
