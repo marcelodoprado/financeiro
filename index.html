@@ -5,42 +5,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Financeiro Cloud</title>
     <meta name="theme-color" content="#111827">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .animar-entrada { animation: fadeInDown 0.5s ease-out forwards; }
+        
+        @media print {
+            body { background-color: white !important; color: black !important; }
+            .print-ocultar { display: none !important; }
+            .text-white, .text-gray-400, .text-gray-200 { color: black !important; }
+            .bg-gray-800, .bg-gray-900 { background-color: white !important; border: none !important; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #d1d5db !important; padding: 8px !important; }
+            th { background-color: #e5e7eb !important; font-weight: bold !important; color: black !important; }
+            tbody tr:nth-child(even) td { background-color: #f9fafb !important; }
+            tbody tr:nth-child(odd) td { background-color: #ffffff !important; }
+            #titulo-impressao { display: inline !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen">
 
 <!-- TELA DE LOGIN -->
-<div id="tela-login" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
+<div id="tela-login" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50 transition-opacity duration-300">
     <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-sm border border-gray-700">
         <h2 id="titulo-login" class="text-2xl font-bold text-white text-center mb-6">Acesso Seguro</h2>
+        
         <input type="email" id="email-login" placeholder="E-mail" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
         <input type="password" id="senha-login" placeholder="Senha" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
-        <button id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded transition-colors mb-4">Entrar no Sistema</button>
+        
+        <button id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded transition-colors mb-4 shadow-lg">Entrar no Sistema</button>
+        
         <p id="msg-erro" class="text-red-400 text-sm text-center hidden mb-4">Ocorreu um erro. Tente novamente.</p>
-        <div class="text-center mb-6"><button id="btn-alternar-registro" class="text-gray-400 hover:text-white text-sm transition-colors underline">Não tem conta? Registre-se</button></div>
+        
+        <div class="text-center mb-6">
+            <button id="btn-alternar-registro" class="text-gray-400 hover:text-white text-sm transition-colors underline decoration-gray-600 underline-offset-4">Não tem conta? Registre-se</button>
+        </div>
+
+        <div class="flex items-center justify-center gap-4 mb-6">
+            <div class="h-px bg-gray-700 w-full"></div><span class="text-gray-500 text-sm">OU</span><div class="h-px bg-gray-700 w-full"></div>
+        </div>
+
+        <button id="btn-google" class="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 px-4 rounded transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Entrar com Google
+        </button>
     </div>
 </div>
 
 <!-- APLICATIVO PRINCIPAL -->
 <div id="app-principal" class="max-w-5xl mx-auto p-4 md:p-8 hidden">
-    <header class="mb-6 flex justify-between items-center border-b border-gray-800 pb-4">
-        <div>
-            <h1 class="text-2xl font-bold text-white">FINANÇAS</h1>
-            <div class="flex items-center gap-2 mt-1">
-                <p id="usuario-logado" class="text-xs text-blue-400"></p>
-                <span class="text-gray-600 text-xs">|</span>
-                <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando Nuvem...</p>
+    
+    <header class="mb-6 flex flex-col md:flex-row justify-between items-center border-b border-gray-800 pb-4 gap-4 print:border-none print:pb-0">
+        <div class="flex items-center gap-4 w-full md:w-auto justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-white tracking-wide">FINANÇAS <span id="titulo-impressao" class="hidden text-lg font-normal ml-2"></span></h1>
+                <div class="flex items-center gap-2 mt-1 print-ocultar">
+                    <p id="usuario-logado" class="text-xs text-blue-400"></p>
+                    <span class="text-gray-600 text-xs">|</span>
+                    <!-- SEMÁFORO DE SINCRONIZAÇÃO -->
+                    <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando Nuvem...</p>
+                </div>
             </div>
+            <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
         </div>
-        <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded">Sair</button>
+        
+        <div class="flex items-center gap-3 print-ocultar flex-wrap justify-center">
+            <button id="btn-voltar-hoje" class="text-gray-400 hover:text-white transition-colors p-2 bg-gray-800 border border-gray-700 rounded" title="Mês atual">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            </button>
+            <select id="filtro-mes" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:outline-none text-sm font-medium">
+                <option value="01">Janeiro</option> <option value="02">Fevereiro</option> <option value="03">Março</option> <option value="04">Abril</option>
+                <option value="05">Maio</option> <option value="06">Junho</option> <option value="07">Julho</option> <option value="08">Agosto</option>
+                <option value="09">Setembro</option> <option value="10">Outubro</option> <option value="11">Novembro</option> <option value="12">Dezembro</option>
+            </select>
+            <select id="filtro-ano" class="bg-gray-800 border border-gray-700 rounded p-2 text-white focus:outline-none text-sm font-medium"></select>
+            <button onclick="window.print()" class="bg-gray-200 hover:bg-white text-gray-900 font-bold py-2 px-4 rounded text-sm">Gerar PDF</button>
+        </div>
     </header>
 
+    <div id="painel-sucesso" class="hidden animar-entrada bg-green-900/40 border border-green-500 text-green-300 p-4 rounded-lg mb-8 text-center print-ocultar">
+        🎉 <strong>Mês Quitado!</strong> Excelente trabalho, você pagou todas as contas registradas!
+    </div>
+
+    <!-- Dashboard -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">A Receber</h3><p id="dash-receber" class="text-xl font-bold text-white">R$ 0,00</p></div>
+        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">A Pagar</h3><p id="dash-pagar" class="text-xl font-bold text-white">R$ 0,00</p></div>
+        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">Recebido</h3><p id="dash-recebido" class="text-xl font-bold text-white">R$ 0,00</p></div>
+        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">Saldo Mês</h3><p id="dash-saldo" class="text-xl font-bold text-white">R$ 0,00</p></div>
+    </div>
+
     <!-- Formulário -->
-    <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
+    <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8 print-ocultar">
         <h2 id="titulo-formulario" class="text-lg font-medium text-white mb-4">Novo Lançamento</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="md:col-span-2"><label class="block text-xs text-gray-400 uppercase mb-1">Descrição</label><input type="text" id="desc" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
@@ -48,28 +115,36 @@
             <div><label class="block text-xs text-gray-400 uppercase mb-1">Status</label><select id="status" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="Pendente">Pendente</option><option value="Pago">Pago</option></select></div>
             <div><label class="block text-xs text-gray-400 uppercase mb-1">Data</label><input type="date" id="data" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
             <div><label class="block text-xs text-gray-400 uppercase mb-1">Valor (R$)</label><input type="number" id="valor" step="0.01" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
-            <div><label class="block text-xs text-gray-400 uppercase mb-1">Repetição</label><select id="repeticao" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="unico">Único</option></select></div>
-            <div class="md:col-span-4 flex justify-end mt-2">
+            <div id="box-repeticao"><label class="block text-xs text-gray-400 uppercase mb-1">Repetição</label><select id="repeticao" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"><option value="unico">Único</option><option value="mensal">Fixo (Até Dez)</option><option value="parcelado">Parcelado</option></select></div>
+            <div id="box-parcelas" class="hidden"><label class="block text-xs text-gray-400 uppercase mb-1">Qtd. Parcelas</label><input type="number" id="qtd_parcelas" min="2" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></div>
+            <div class="md:col-span-4 flex justify-end gap-2 mt-2">
+                <button id="btn-cancelar-edicao" class="hidden bg-gray-700 text-white py-2 px-4 rounded font-medium">Cancelar</button>
                 <button id="btn-salvar" class="bg-gray-200 text-gray-900 font-bold py-2 px-6 rounded transition-colors hover:bg-white">Salvar na Nuvem</button>
             </div>
         </div>
     </div>
 
     <!-- Tabela -->
-    <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto">
+    <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto mb-8">
         <table class="w-full text-sm text-left">
             <thead class="text-xs text-gray-400 uppercase bg-gray-900 border-b border-gray-700">
-                <tr><th class="px-4 py-3">Data</th><th class="px-4 py-3">Descrição</th><th class="px-4 py-3">Valor</th><th class="px-4 py-3">Status</th></tr>
+                <tr><th class="px-4 py-3">Data</th><th class="px-4 py-3">Descrição</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3">Valor</th><th class="px-4 py-3">Status</th><th class="px-4 py-3 text-right print-ocultar">Ações</th></tr>
             </thead>
             <tbody id="tabela-corpo" class="divide-y divide-gray-700"></tbody>
         </table>
     </div>
+
 </div>
 
+<!-- ======================================================= -->
+<!-- JAVASCRIPT: ARQUITETURA FINAL COM LONG POLLING          -->
+<!-- ======================================================= -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import { initializeFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    
+    // Importação clássica
+    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
@@ -82,52 +157,108 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    // Modo de Força Bruta para Redes Bloqueadas
-    const db = initializeFirestore(app, { experimentalForceLongPolling: true }); 
+    
+    // O FURA-BLOQUEIO: Agora que o banco existe, isso vai funcionar perfeitamente
+    const db = initializeFirestore(app, {
+        experimentalForceLongPolling: true
+    });
     
     let colLancamentos = null;
+    let unsubscribeSnapshot = null; 
+    let bancoDeDados = [];
+    let idEditando = null;
+    let confeteJaDisparadoMeseAno = ""; 
     
     const telaLogin = document.getElementById('tela-login');
     const appPrincipal = document.getElementById('app-principal');
+    const msgErro = document.getElementById('msg-erro');
     const statusSync = document.getElementById('status-sincronizacao');
 
-    // ==========================================
-    // O CRONÔMETRO BOMBA (TIMEOUT FORÇADO)
-    // ==========================================
+    // =======================================================
+    // SALVAMENTO SEGURO
+    // =======================================================
     document.getElementById('btn-salvar').addEventListener('click', async () => {
+        if(!colLancamentos) { 
+            alert("Sua sessão expirou. Faça login novamente."); return; 
+        }
+        
         const desc = document.getElementById('desc').value.trim();
+        const tipo = document.getElementById('tipo').value;
+        const status = document.getElementById('status').value;
         const data = document.getElementById('data').value;
         const valor = parseFloat(document.getElementById('valor').value);
+        const repeticao = document.getElementById('repeticao').value;
 
-        if (!desc || isNaN(valor) || !data) return alert("Preencha Descrição, Data e Valor.");
+        if (!desc || isNaN(valor) || valor <= 0 || !data) { 
+            alert("Preencha todos os campos obrigatórios."); return; 
+        }
 
         statusSync.innerText = '🟡 Salvando na Nuvem...';
-        
+        statusSync.className = 'text-xs font-bold text-yellow-500';
+
         try {
-            const lancamentoInfo = { desc, tipo: document.getElementById('tipo').value, data, valor, status: document.getElementById('status').value };
-            
-            // Cria a ordem de salvamento normal
-            const promessaSalvar = addDoc(colLancamentos, lancamentoInfo);
-            
-            // Cria um cronômetro de 5 segundos. Se estourar, ele corta a operação.
-            const promessaTimeout = new Promise((resolve, reject) => {
-                setTimeout(() => reject(new Error("TIMEOUT_REDE")), 5000);
-            });
+            if (idEditando === null) {
+                let limiteLoop = 1;
+                const dataBase = new Date(data + 'T12:00:00'); 
+                
+                if (repeticao === 'mensal') limiteLoop = 12 - dataBase.getMonth();
+                if (repeticao === 'parcelado') limiteLoop = parseInt(document.getElementById('qtd_parcelas').value) || 1;
 
-            // O código faz uma "corrida". Se o salvamento demorar mais de 5s, o Timeout vence e acusa o erro.
-            await Promise.race([promessaSalvar, promessaTimeout]);
-
+                for (let i = 0; i < limiteLoop; i++) {
+                    const novaData = new Date(dataBase);
+                    novaData.setMonth(novaData.getMonth() + i);
+                    let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
+                    
+                    await addDoc(colLancamentos, {
+                        desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
+                    });
+                }
+            } else {
+                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
+                await updateDoc(docRef, { desc, tipo, status, data, valor });
+                cancelarEdicao();
+            }
+            limparFormulario();
             statusSync.innerText = '🟢 Salvo com Sucesso';
-            document.getElementById('desc').value = '';
-            document.getElementById('valor').value = '';
+            statusSync.className = 'text-xs font-bold text-green-500';
             
         } catch (erro) {
-            statusSync.innerText = '🔴 Erro de Rede';
-            if(erro.message === "TIMEOUT_REDE") {
-                alert("O Firebase está sendo bloqueado de acessar a internet pelo seu computador ou roteador e não consegue enviar os dados.\n\nPor favor, abra o Console apertando F12.");
-            } else {
-                alert(`Erro Técnico: ${erro.message}`);
-            }
+            statusSync.innerText = '🔴 Erro de Envio';
+            statusSync.className = 'text-xs font-bold text-red-500';
+            alert(`Falha de Conexão. O dado não foi salvo.\nErro Técnico: ${erro.message}`);
+        }
+    });
+
+    document.getElementById('btn-cancelar-edicao').addEventListener('click', () => cancelarEdicao());
+    document.getElementById('btn-voltar-hoje').addEventListener('click', () => voltarMesAtual());
+    document.getElementById('filtro-mes').addEventListener('change', () => atualizarTela());
+    document.getElementById('filtro-ano').addEventListener('change', () => atualizarTela());
+    
+    document.getElementById('tipo').addEventListener('change', () => {
+        const tipo = document.getElementById('tipo').value;
+        const statusSelect = document.getElementById('status');
+        if (tipo === 'Receber') statusSelect.innerHTML = '<option value="Pendente">Pendente</option><option value="Recebido">Recebido</option>';
+        else statusSelect.innerHTML = '<option value="Pendente">Pendente</option><option value="Pago">Pago</option>';
+    });
+
+    document.getElementById('repeticao').addEventListener('change', () => {
+        const rep = document.getElementById('repeticao').value;
+        if (rep === 'parcelado') document.getElementById('box-parcelas').classList.remove('hidden');
+        else document.getElementById('box-parcelas').classList.add('hidden');
+    });
+
+    // SISTEMA DE LOGIN
+    let modoRegistro = false;
+    document.getElementById('btn-alternar-registro').addEventListener('click', () => {
+        modoRegistro = !modoRegistro;
+        if(modoRegistro) {
+            document.getElementById('titulo-login').innerText = "Criar Nova Conta";
+            document.getElementById('btn-entrar').innerText = "Registrar-se";
+            document.getElementById('btn-alternar-registro').innerText = "Já tem uma conta? Entre";
+        } else {
+            document.getElementById('titulo-login').innerText = "Acesso Seguro";
+            document.getElementById('btn-entrar').innerText = "Entrar no Sistema";
+            document.getElementById('btn-alternar-registro').innerText = "Não tem conta? Registre-se";
         }
     });
 
@@ -135,44 +266,229 @@
         if (user) {
             telaLogin.classList.add('hidden');
             appPrincipal.classList.remove('hidden');
-            document.getElementById('usuario-logado').innerText = user.email;
+            document.getElementById('usuario-logado').innerText = `${user.email}`;
             
             colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
-            iniciarEscuta();
+            configurarFiltrosIniciais(); 
+            iniciarEscutaDoBanco();
         } else {
             appPrincipal.classList.add('hidden');
             telaLogin.classList.remove('hidden');
+            if(unsubscribeSnapshot) unsubscribeSnapshot(); 
+            bancoDeDados = []; 
         }
     });
 
     document.getElementById('btn-entrar').addEventListener('click', () => {
         const email = document.getElementById('email-login').value;
         const senha = document.getElementById('senha-login').value;
-        if(modoRegistro) createUserWithEmailAndPassword(auth, email, senha);
-        else signInWithEmailAndPassword(auth, email, senha);
+        msgErro.classList.add('hidden');
+        if (modoRegistro) {
+            createUserWithEmailAndPassword(auth, email, senha).catch((error) => mostrarErro(error.code));
+        } else {
+            signInWithEmailAndPassword(auth, email, senha).catch((error) => mostrarErro(error.code));
+        }
     });
 
-    let modoRegistro = false;
-    document.getElementById('btn-alternar-registro').addEventListener('click', () => {
-        modoRegistro = !modoRegistro;
-        document.getElementById('btn-entrar').innerText = modoRegistro ? "Registrar-se" : "Entrar no Sistema";
+    const providerGoogle = new GoogleAuthProvider();
+    document.getElementById('btn-google').addEventListener('click', () => {
+        msgErro.classList.add('hidden');
+        signInWithPopup(auth, providerGoogle).catch((error) => mostrarErro(error.code));
     });
 
-    document.getElementById('btn-sair').addEventListener('click', () => signOut(auth));
+    document.getElementById('btn-sair').addEventListener('click', () => { signOut(auth); });
 
-    function iniciarEscuta() {
-        onSnapshot(colLancamentos, (snapshot) => {
-            const corpoTabela = document.getElementById('tabela-corpo');
-            corpoTabela.innerHTML = '';
+    function mostrarErro(codigo) {
+        msgErro.classList.remove('hidden');
+        if (codigo === 'auth/email-already-in-use') msgErro.innerText = "Este e-mail já está cadastrado.";
+        else if (codigo === 'auth/weak-password') msgErro.innerText = "A senha deve ter pelo menos 6 caracteres.";
+        else if (codigo === 'auth/invalid-credential') msgErro.innerText = "E-mail ou senha incorretos.";
+        else msgErro.innerText = "Ocorreu um erro. Tente novamente.";
+    }
+
+    // CONEXÃO DE VIGIA (TEMPO REAL)
+    function iniciarEscutaDoBanco() {
+        if(unsubscribeSnapshot) unsubscribeSnapshot();
+        
+        statusSync.innerText = '🟡 Conectando Banco...';
+        statusSync.className = 'text-xs font-bold text-yellow-500';
+
+        unsubscribeSnapshot = onSnapshot(colLancamentos, (snapshot) => {
+            bancoDeDados = [];
+            snapshot.forEach((docRef) => { bancoDeDados.push({ id: docRef.id, ...docRef.data() }); });
+            
             statusSync.innerText = '🟢 Online e Atualizado';
-            snapshot.forEach((docRef) => {
-                const conta = docRef.data();
-                corpoTabela.innerHTML += `<tr><td class="px-4 py-2">${conta.data}</td><td class="px-4 py-2">${conta.desc}</td><td class="px-4 py-2">R$ ${conta.valor}</td><td class="px-4 py-2">${conta.status}</td></tr>`;
-            });
+            statusSync.className = 'text-xs font-bold text-green-500';
+            
+            atualizarTela();
         }, (erro) => {
             statusSync.innerText = '🔴 Desconectado';
-            console.error(erro);
+            statusSync.className = 'text-xs font-bold text-red-500';
+            console.error("Erro no onSnapshot:", erro);
         });
+    }
+
+    // LÓGICA DE INTERFACE
+    const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
+
+    function configurarFiltrosIniciais() {
+        const hoje = new Date();
+        const anoAtual = hoje.getFullYear();
+        const selectAno = document.getElementById('filtro-ano');
+        selectAno.innerHTML = '';
+        for (let i = anoAtual - 1; i <= anoAtual + 4; i++) {
+            const option = document.createElement('option');
+            option.value = i; option.text = i; selectAno.appendChild(option);
+        }
+        voltarMesAtual(); 
+    }
+
+    function voltarMesAtual() {
+        const hoje = new Date();
+        document.getElementById('filtro-mes').value = String(hoje.getMonth() + 1).padStart(2, '0');
+        document.getElementById('filtro-ano').value = hoje.getFullYear();
+        document.getElementById('data').value = hoje.toISOString().split('T')[0];
+        atualizarTela();
+    }
+
+    function formatarData(dataISO) {
+        if (!dataISO) return '-'; const partes = dataISO.split('-'); return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    window.prepararEdicao = function(id) {
+        const lancamento = bancoDeDados.find(item => item.id === id);
+        if (!lancamento) return;
+        document.getElementById('desc').value = lancamento.desc; document.getElementById('tipo').value = lancamento.tipo;
+        
+        const event = new Event('change');
+        document.getElementById('tipo').dispatchEvent(event);
+        
+        document.getElementById('status').value = lancamento.status;
+        document.getElementById('data').value = lancamento.data; document.getElementById('valor').value = lancamento.valor;
+        document.getElementById('box-repeticao').classList.add('hidden'); document.getElementById('box-parcelas').classList.add('hidden');
+        idEditando = id;
+        document.getElementById('titulo-formulario').innerText = "Editando Lançamento"; document.getElementById('titulo-formulario').classList.add('text-yellow-500');
+        document.getElementById('btn-salvar').innerText = "Atualizar Nuvem"; document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function cancelarEdicao() {
+        idEditando = null;
+        document.getElementById('box-repeticao').classList.remove('hidden');
+        document.getElementById('titulo-formulario').innerText = "Novo Lançamento"; document.getElementById('titulo-formulario').classList.remove('text-yellow-500');
+        document.getElementById('btn-salvar').innerText = "Salvar na Nuvem"; document.getElementById('btn-cancelar-edicao').classList.add('hidden');
+        limparFormulario();
+    }
+
+    window.marcarConcluido = async function(id) {
+        if(!auth.currentUser) return;
+        statusSync.innerText = '🟡 Atualizando Nuvem...';
+        statusSync.className = 'text-xs font-bold text-yellow-500';
+        try {
+            const lancamento = bancoDeDados.find(item => item.id === id);
+            if (lancamento) {
+                const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
+                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
+                await updateDoc(docRef, { status: novoStatus });
+            }
+        } catch (erro) {
+            statusSync.innerText = '🔴 Erro de Conexão';
+            statusSync.className = 'text-xs font-bold text-red-500';
+            alert(`Falha ao dar baixa: ${erro.message}`);
+        }
+    };
+
+    window.deletar = async function(id) {
+        if (!auth.currentUser) return;
+        if (confirm("Deseja excluir definitivamente da nuvem?")) {
+            statusSync.innerText = '🟡 Excluindo da Nuvem...';
+            statusSync.className = 'text-xs font-bold text-yellow-500';
+            try {
+                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
+                await deleteDoc(docRef);
+            } catch (erro) {
+                statusSync.innerText = '🔴 Erro de Conexão';
+                statusSync.className = 'text-xs font-bold text-red-500';
+                alert(`Falha ao apagar: ${erro.message}`);
+            }
+        }
+    };
+
+    function limparFormulario() {
+        document.getElementById('desc').value = ''; document.getElementById('valor').value = '';
+        document.getElementById('repeticao').value = 'unico'; 
+        const event = new Event('change');
+        document.getElementById('repeticao').dispatchEvent(event);
+    }
+
+    function atualizarTela() {
+        const corpoTabela = document.getElementById('tabela-corpo');
+        corpoTabela.innerHTML = ''; 
+
+        const fMes = document.getElementById('filtro-mes').value; const fAno = document.getElementById('filtro-ano').value;
+        const controleMesAno = `${fMes}-${fAno}`;
+        document.getElementById('titulo-impressao').innerText = `- ${nomeMeses[fMes]} de ${fAno}`;
+
+        const dadosFiltrados = bancoDeDados.filter(conta => {
+            const anoConta = conta.data.substring(0, 4); const mesConta = conta.data.substring(5, 7);
+            return (anoConta === fAno && mesConta === fMes);
+        });
+
+        dadosFiltrados.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+        let totReceber = 0, totPagar = 0, totRecebido = 0, totPago = 0;
+        let qtdeContasPagar = 0, qtdeContasPagas = 0;
+
+        dadosFiltrados.forEach((conta, index) => {
+            if (conta.tipo === 'Receber' && conta.status === 'Pendente') totReceber += conta.valor;
+            if (conta.tipo === 'Pagar' && conta.status === 'Pendente') totPagar += conta.valor;
+            if (conta.status === 'Recebido') totRecebido += conta.valor;
+            if (conta.status === 'Pago') totPago += conta.valor;
+
+            if (conta.tipo === 'Pagar') { qtdeContasPagar++; if (conta.status === 'Pago') qtdeContasPagas++; }
+
+            let badgeClass = "bg-gray-700 text-gray-300 border-gray-600"; 
+            if (conta.status === 'Pago') badgeClass = "bg-green-900/50 text-green-400 border-green-800"; 
+            if (conta.status === 'Recebido') badgeClass = "bg-yellow-900/50 text-yellow-400 border-yellow-800"; 
+
+            let btnBaixa = '';
+            if (conta.status === 'Pendente') {
+                btnBaixa = `<button onclick="marcarConcluido('${conta.id}')" class="text-gray-400 hover:text-white px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors mr-1">✔ Baixa</button>`;
+            }
+
+            const corZebrada = index % 2 === 0 ? "bg-gray-800/30" : "bg-transparent";
+
+            const tr = document.createElement('tr');
+            tr.className = `hover:bg-gray-750 transition-colors ${corZebrada}`;
+            tr.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-gray-400">${formatarData(conta.data)}</td>
+                <td class="px-4 py-3 font-medium text-gray-200">${conta.desc}</td>
+                <td class="px-4 py-3 text-gray-400">${conta.tipo === 'Pagar' ? 'Saída' : 'Entrada'}</td>
+                <td class="px-4 py-3 text-gray-200">R$ ${conta.valor.toFixed(2).replace('.', ',')}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 text-[10px] uppercase font-bold rounded border ${badgeClass}">${conta.status}</span></td>
+                <td class="px-4 py-3 text-right whitespace-nowrap print-ocultar">
+                    ${btnBaixa}
+                    <button onclick="prepararEdicao('${conta.id}')" class="text-blue-400 hover:text-blue-300 px-2 text-sm">Editar</button>
+                    <button onclick="deletar('${conta.id}')" class="text-red-400 hover:text-red-300 px-2 text-sm">Excluir</button>
+                </td>
+            `;
+            corpoTabela.appendChild(tr);
+        });
+
+        if (dadosFiltrados.length === 0) corpoTabela.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhum lançamento encontrado neste mês.</td></tr>`;
+
+        const painelSucesso = document.getElementById('painel-sucesso');
+        if (qtdeContasPagar > 0 && qtdeContasPagar === qtdeContasPagas) {
+            painelSucesso.classList.remove('hidden');
+            if (confeteJaDisparadoMeseAno !== controleMesAno) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); confeteJaDisparadoMeseAno = controleMesAno; }
+        } else { painelSucesso.classList.add('hidden'); }
+
+        document.getElementById('dash-receber').innerText = `R$ ${totReceber.toFixed(2).replace('.', ',')}`; document.getElementById('dash-pagar').innerText = `R$ ${totPagar.toFixed(2).replace('.', ',')}`;
+        document.getElementById('dash-recebido').innerText = `R$ ${totRecebido.toFixed(2).replace('.', ',')}`;
+        const saldoFinal = totRecebido - totPago;
+        const saldoElemento = document.getElementById('dash-saldo');
+        saldoElemento.innerText = `R$ ${saldoFinal.toFixed(2).replace('.', ',')}`;
+        saldoElemento.className = saldoFinal < 0 ? "text-xl font-bold text-red-400" : "text-xl font-bold text-white";
     }
 </script>
 </body>
