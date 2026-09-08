@@ -74,7 +74,7 @@
                     <p id="usuario-logado" class="text-xs text-blue-400"></p>
                     <span class="text-gray-600 text-xs">|</span>
                     <!-- SEMÁFORO DE SINCRONIZAÇÃO -->
-                    <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando Nuvem...</p>
+                    <p id="status-sincronizacao" class="text-xs font-bold text-gray-500">Conectando Nuvem...</p>
                 </div>
             </div>
             <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
@@ -137,13 +137,11 @@
 </div>
 
 <!-- ======================================================= -->
-<!-- JAVASCRIPT: ARQUITETURA FINAL COM LONG POLLING          -->
+<!-- JAVASCRIPT: ARQUITETURA DE PRODUÇÃO FINAL (V1.0)        -->
 <!-- ======================================================= -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    
-    // Importação clássica
     import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -158,7 +156,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     
-    // O FURA-BLOQUEIO: Agora que o banco existe, isso vai funcionar perfeitamente
+    // A diretriz de resiliência permanente para garantir a conexão na sua rede
     const db = initializeFirestore(app, {
         experimentalForceLongPolling: true
     });
@@ -175,7 +173,7 @@
     const statusSync = document.getElementById('status-sincronizacao');
 
     // =======================================================
-    // SALVAMENTO SEGURO
+    // SALVAMENTO PROFISSIONAL (SEM TIMEOUT FORÇADO)
     // =======================================================
     document.getElementById('btn-salvar').addEventListener('click', async () => {
         if(!colLancamentos) { 
@@ -218,6 +216,7 @@
                 await updateDoc(docRef, { desc, tipo, status, data, valor });
                 cancelarEdicao();
             }
+            
             limparFormulario();
             statusSync.innerText = '🟢 Salvo com Sucesso';
             statusSync.className = 'text-xs font-bold text-green-500';
@@ -247,7 +246,9 @@
         else document.getElementById('box-parcelas').classList.add('hidden');
     });
 
-    // SISTEMA DE LOGIN
+    // =======================================================
+    // SISTEMA DE LOGIN E REGISTRO
+    // =======================================================
     let modoRegistro = false;
     document.getElementById('btn-alternar-registro').addEventListener('click', () => {
         modoRegistro = !modoRegistro;
@@ -306,7 +307,9 @@
         else msgErro.innerText = "Ocorreu um erro. Tente novamente.";
     }
 
+    // =======================================================
     // CONEXÃO DE VIGIA (TEMPO REAL)
+    // =======================================================
     function iniciarEscutaDoBanco() {
         if(unsubscribeSnapshot) unsubscribeSnapshot();
         
@@ -328,7 +331,9 @@
         });
     }
 
-    // LÓGICA DE INTERFACE
+    // =======================================================
+    // LÓGICA DE INTERFACE E TABELA
+    // =======================================================
     const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
 
     function configurarFiltrosIniciais() {
