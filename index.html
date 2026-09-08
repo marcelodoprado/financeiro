@@ -133,20 +133,18 @@
     <!-- PAINEL DE DIAGNÓSTICO (VISÍVEL NA TELA)    -->
     <!-- ========================================== -->
     <div id="painel-diagnostico" class="bg-black text-green-400 font-mono text-[11px] p-4 rounded-lg h-48 overflow-y-auto border border-gray-600 print-ocultar">
-        <p class="text-gray-500 mb-2">>> SISTEMA INICIADO. FORÇANDO CONEXÃO HTTP (LONG POLLING)...</p>
+        <p class="text-gray-500 mb-2">>> SISTEMA INICIADO. VERSÃO ESTÁVEL (V10). AGUARDANDO...</p>
     </div>
 
 </div>
 
-<!-- JAVASCRIPT: FIREBASE E LÓGICA -->
+<!-- JAVASCRIPT: FIREBASE E LÓGICA (SDK Versão 10.13.0) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    
-    // ATENÇÃO AQUI: Importamos a função initializeFirestore
-    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-    // AS SUAS CHAVES PERFEITAMENTE COLADAS
+    // AS SUAS CHAVES PREENCHIDAS
     const firebaseConfig = {
       apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
       authDomain: "financeiro-cd95f.firebaseapp.com",
@@ -158,11 +156,7 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    
-    // A GRANDE CORREÇÃO: Forçando o Long Polling para contornar o bloqueio de rede
-    const db = initializeFirestore(app, {
-        experimentalForceLongPolling: true
-    });
+    const db = getFirestore(app);
     
     let colLancamentos = null;
     let unsubscribeSnapshot = null; 
@@ -214,7 +208,6 @@
             
             colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
             window.logNaTela(`Autenticado com sucesso. ID do usuário: ${user.uid}`);
-            window.logNaTela(`Caminho do banco configurado: usuarios/${user.uid}/lancamentos`);
             
             configurarFiltrosIniciais(); 
             iniciarEscutaDoBanco();
@@ -266,7 +259,6 @@
             }, (erro) => {
                 window.logNaTela("FALHA AO LER O BANCO DE DADOS!", true);
                 window.logNaTela(erro, true);
-                alert("Falha de conexão com a Nuvem. Olhe o painel de diagnóstico.");
             });
         } catch (error) {
             window.logNaTela("ERRO INTERNO NA ESCUTA DO BANCO:", true);
@@ -319,7 +311,7 @@
         window.logNaTela("Iniciando rotina de salvamento...");
         
         if(!colLancamentos) { 
-            window.logNaTela("ERRO: Usuário não validado (colLancamentos é nulo).", true);
+            window.logNaTela("ERRO: Usuário não validado.", true);
             alert("Usuário não validado."); return; 
         }
         
@@ -329,8 +321,6 @@
         const data = document.getElementById('data').value;
         const valor = parseFloat(document.getElementById('valor').value);
         const repeticao = document.getElementById('repeticao').value;
-
-        window.logNaTela(`Dados capturados: ${desc} | R$${valor} | ${data}`);
 
         if (!desc || isNaN(valor) || valor <= 0 || !data) { 
             window.logNaTela("Operação cancelada: Campos obrigatórios em branco.");
@@ -345,7 +335,7 @@
                 if (repeticao === 'mensal') limiteLoop = 12 - dataBase.getMonth();
                 if (repeticao === 'parcelado') limiteLoop = parseInt(document.getElementById('qtd_parcelas').value) || 1;
 
-                window.logNaTela(`Preparando para gravar ${limiteLoop} documento(s) no Firestore usando Long Polling...`);
+                window.logNaTela(`Preparando para gravar ${limiteLoop} documento(s) no Firestore...`);
 
                 for (let i = 0; i < limiteLoop; i++) {
                     const novaData = new Date(dataBase);
@@ -365,7 +355,7 @@
                 window.cancelarEdicao();
             }
             limparFormulario();
-            window.logNaTela("Rotina concluída com sucesso! Os dados estão na nuvem.");
+            window.logNaTela("Rotina concluída com sucesso!");
         } catch (erro) {
             window.logNaTela("FALHA CATASTRÓFICA AO SALVAR:", true);
             window.logNaTela(erro, true);
