@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Financeiro Cloud</title>
     <meta name="theme-color" content="#111827">
+    
+    <!-- Aviso resolvido: Inclusão da nova tag sugerida pelo Chrome -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
@@ -41,10 +44,13 @@
     <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-sm border border-gray-700">
         <h2 id="titulo-login" class="text-2xl font-bold text-white text-center mb-6">Acesso Seguro</h2>
         
-        <input type="email" id="email-login" placeholder="E-mail" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
-        <input type="password" id="senha-login" placeholder="Senha" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
-        
-        <button id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded transition-colors mb-4 shadow-lg">Entrar no Sistema</button>
+        <!-- Aviso resolvido: Envolvendo os inputs na tag <form> -->
+        <form id="form-autenticacao" onsubmit="event.preventDefault();">
+            <input type="email" id="email-login" autocomplete="username" placeholder="E-mail" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
+            <input type="password" id="senha-login" autocomplete="current-password" placeholder="Senha" class="w-full mb-4 bg-gray-900 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
+            
+            <button type="submit" id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded transition-colors mb-4 shadow-lg">Entrar no Sistema</button>
+        </form>
         
         <p id="msg-erro" class="text-red-400 text-sm text-center hidden mb-4">Ocorreu um erro. Tente novamente.</p>
         
@@ -135,14 +141,12 @@
 
 </div>
 
-<!-- JAVASCRIPT: ARQUITETURA DE PRODUÇÃO FINAL (CDN CORE) -->
+<!-- JAVASCRIPT: ARQUITETURA OFICIAL FIREBASE CDN -->
 <script type="module">
-    // A importação deve ser via CDN (links diretos) para funcionar sem Node.js/Webpack
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-    // As chaves exatas do seu painel
     const firebaseConfig = {
       apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
       authDomain: "financeiro-cd95f.firebaseapp.com",
@@ -154,11 +158,7 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    
-    // Diretriz de estabilidade de rede (Essencial para não travar no seu 4G)
-    const db = initializeFirestore(app, {
-        experimentalForceLongPolling: true
-    });
+    const db = getFirestore(app); 
     
     let colLancamentos = null;
     let unsubscribeSnapshot = null; 
@@ -168,16 +168,13 @@
     
     const telaLogin = document.getElementById('tela-login');
     const appPrincipal = document.getElementById('app-principal');
-    const msgErro = document.getElementById('msg-erro');
     const statusSync = document.getElementById('status-sincronizacao');
 
-    // =======================================================
-    // SALVAMENTO PROFISSIONAL
-    // =======================================================
+    // -----------------------------------------------------
+    // SALVAR E ATUALIZAR DADOS
+    // -----------------------------------------------------
     document.getElementById('btn-salvar').addEventListener('click', async () => {
-        if(!colLancamentos) { 
-            alert("Sua sessão expirou. Faça login novamente."); return; 
-        }
+        if(!colLancamentos) return alert("Sua sessão expirou. Faça login novamente."); 
         
         const desc = document.getElementById('desc').value.trim();
         const tipo = document.getElementById('tipo').value;
@@ -186,9 +183,7 @@
         const valor = parseFloat(document.getElementById('valor').value);
         const repeticao = document.getElementById('repeticao').value;
 
-        if (!desc || isNaN(valor) || valor <= 0 || !data) { 
-            alert("Preencha todos os campos obrigatórios."); return; 
-        }
+        if (!desc || isNaN(valor) || !data) return alert("Preencha todos os campos obrigatórios.");
 
         statusSync.innerText = '🟡 Salvando na Nuvem...';
         statusSync.className = 'text-xs font-bold text-yellow-500';
@@ -205,38 +200,33 @@
                     const novaData = new Date(dataBase);
                     novaData.setMonth(novaData.getMonth() + i);
                     let descFinal = repeticao === 'parcelado' ? `${desc} (${i + 1}/${limiteLoop})` : desc;
-                    
-                    await addDoc(colLancamentos, {
-                        desc: descFinal, tipo: tipo, data: novaData.toISOString().split('T')[0], valor: valor, status: status
-                    });
+                    await addDoc(colLancamentos, { desc: descFinal, tipo, data: novaData.toISOString().split('T')[0], valor, status });
                 }
             } else {
                 const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", idEditando);
                 await updateDoc(docRef, { desc, tipo, status, data, valor });
                 cancelarEdicao();
             }
-            
             limparFormulario();
             statusSync.innerText = '🟢 Salvo com Sucesso';
             statusSync.className = 'text-xs font-bold text-green-500';
-            
         } catch (erro) {
-            statusSync.innerText = '🔴 Erro de Envio';
+            statusSync.innerText = '🔴 Erro de Conexão';
             statusSync.className = 'text-xs font-bold text-red-500';
-            alert(`Falha de Conexão. O dado não foi salvo.\nErro Técnico: ${erro.message}`);
+            alert(`Falha de Conexão. Detalhe do Erro: ${erro.message}`);
         }
     });
 
     document.getElementById('btn-cancelar-edicao').addEventListener('click', () => cancelarEdicao());
+    document.getElementById('filtro-mes').addEventListener('change', atualizarTela);
+    document.getElementById('filtro-ano').addEventListener('change', atualizarTela);
     document.getElementById('btn-voltar-hoje').addEventListener('click', () => voltarMesAtual());
-    document.getElementById('filtro-mes').addEventListener('change', () => atualizarTela());
-    document.getElementById('filtro-ano').addEventListener('change', () => atualizarTela());
     
     document.getElementById('tipo').addEventListener('change', () => {
         const tipo = document.getElementById('tipo').value;
-        const statusSelect = document.getElementById('status');
-        if (tipo === 'Receber') statusSelect.innerHTML = '<option value="Pendente">Pendente</option><option value="Recebido">Recebido</option>';
-        else statusSelect.innerHTML = '<option value="Pendente">Pendente</option><option value="Pago">Pago</option>';
+        document.getElementById('status').innerHTML = tipo === 'Receber' 
+            ? '<option value="Pendente">Pendente</option><option value="Recebido">Recebido</option>'
+            : '<option value="Pendente">Pendente</option><option value="Pago">Pago</option>';
     });
 
     document.getElementById('repeticao').addEventListener('change', () => {
@@ -245,26 +235,22 @@
         else document.getElementById('box-parcelas').classList.add('hidden');
     });
 
-    // SISTEMA DE LOGIN E REGISTRO
+    // -----------------------------------------------------
+    // SISTEMA DE AUTENTICAÇÃO
+    // -----------------------------------------------------
     let modoRegistro = false;
     document.getElementById('btn-alternar-registro').addEventListener('click', () => {
         modoRegistro = !modoRegistro;
-        if(modoRegistro) {
-            document.getElementById('titulo-login').innerText = "Criar Nova Conta";
-            document.getElementById('btn-entrar').innerText = "Registrar-se";
-            document.getElementById('btn-alternar-registro').innerText = "Já tem uma conta? Entre";
-        } else {
-            document.getElementById('titulo-login').innerText = "Acesso Seguro";
-            document.getElementById('btn-entrar').innerText = "Entrar no Sistema";
-            document.getElementById('btn-alternar-registro').innerText = "Não tem conta? Registre-se";
-        }
+        document.getElementById('titulo-login').innerText = modoRegistro ? "Criar Nova Conta" : "Acesso Seguro";
+        document.getElementById('btn-entrar').innerText = modoRegistro ? "Registrar-se" : "Entrar no Sistema";
+        document.getElementById('btn-alternar-registro').innerText = modoRegistro ? "Já tem uma conta? Entre" : "Não tem conta? Registre-se";
     });
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
             telaLogin.classList.add('hidden');
             appPrincipal.classList.remove('hidden');
-            document.getElementById('usuario-logado').innerText = `${user.email}`;
+            document.getElementById('usuario-logado').innerText = user.email;
             
             colLancamentos = collection(db, "usuarios", user.uid, "lancamentos");
             configurarFiltrosIniciais(); 
@@ -280,35 +266,30 @@
     document.getElementById('btn-entrar').addEventListener('click', () => {
         const email = document.getElementById('email-login').value;
         const senha = document.getElementById('senha-login').value;
+        const msgErro = document.getElementById('msg-erro');
         msgErro.classList.add('hidden');
+        
         if (modoRegistro) {
-            createUserWithEmailAndPassword(auth, email, senha).catch((error) => mostrarErro(error.code));
+            createUserWithEmailAndPassword(auth, email, senha).catch(e => { msgErro.innerText = "Erro ao criar conta."; msgErro.classList.remove('hidden'); });
         } else {
-            signInWithEmailAndPassword(auth, email, senha).catch((error) => mostrarErro(error.code));
+            signInWithEmailAndPassword(auth, email, senha).catch(e => { msgErro.innerText = "E-mail ou senha incorretos."; msgErro.classList.remove('hidden'); });
         }
     });
 
     const providerGoogle = new GoogleAuthProvider();
     document.getElementById('btn-google').addEventListener('click', () => {
-        msgErro.classList.add('hidden');
-        signInWithPopup(auth, providerGoogle).catch((error) => mostrarErro(error.code));
+        document.getElementById('msg-erro').classList.add('hidden');
+        signInWithPopup(auth, providerGoogle).catch((error) => console.error(error));
     });
 
-    document.getElementById('btn-sair').addEventListener('click', () => { signOut(auth); });
+    document.getElementById('btn-sair').addEventListener('click', () => signOut(auth));
 
-    function mostrarErro(codigo) {
-        msgErro.classList.remove('hidden');
-        if (codigo === 'auth/email-already-in-use') msgErro.innerText = "Este e-mail já está cadastrado.";
-        else if (codigo === 'auth/weak-password') msgErro.innerText = "A senha deve ter pelo menos 6 caracteres.";
-        else if (codigo === 'auth/invalid-credential') msgErro.innerText = "E-mail ou senha incorretos.";
-        else msgErro.innerText = "Ocorreu um erro. Tente novamente.";
-    }
-
-    // CONEXÃO DE VIGIA (TEMPO REAL)
+    // -----------------------------------------------------
+    // ESCUTA EM TEMPO REAL
+    // -----------------------------------------------------
     function iniciarEscutaDoBanco() {
         if(unsubscribeSnapshot) unsubscribeSnapshot();
-        
-        statusSync.innerText = '🟡 Conectando Banco...';
+        statusSync.innerText = '🟡 Conectando Nuvem...';
         statusSync.className = 'text-xs font-bold text-yellow-500';
 
         unsubscribeSnapshot = onSnapshot(colLancamentos, (snapshot) => {
@@ -317,26 +298,30 @@
             
             statusSync.innerText = '🟢 Online e Atualizado';
             statusSync.className = 'text-xs font-bold text-green-500';
-            
             atualizarTela();
         }, (erro) => {
             statusSync.innerText = '🔴 Desconectado';
             statusSync.className = 'text-xs font-bold text-red-500';
-            console.error("Erro no onSnapshot:", erro);
+            console.error("Erro na leitura:", erro);
         });
     }
 
-    // LÓGICA DE INTERFACE E TABELA
+    // -----------------------------------------------------
+    // FUNÇÕES DE TELA
+    // -----------------------------------------------------
     const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
 
     function configurarFiltrosIniciais() {
         const hoje = new Date();
-        const anoAtual = hoje.getFullYear();
         const selectAno = document.getElementById('filtro-ano');
-        selectAno.innerHTML = '';
-        for (let i = anoAtual - 1; i <= anoAtual + 4; i++) {
-            const option = document.createElement('option');
-            option.value = i; option.text = i; selectAno.appendChild(option);
+        const selectMes = document.getElementById('filtro-mes');
+        selectAno.innerHTML = ''; selectMes.innerHTML = '';
+        
+        for (let i = hoje.getFullYear() - 1; i <= hoje.getFullYear() + 4; i++) {
+            selectAno.innerHTML += `<option value="${i}">${i}</option>`;
+        }
+        for (const [num, nome] of Object.entries(nomeMeses)) {
+            selectMes.innerHTML += `<option value="${num}">${nome}</option>`;
         }
         voltarMesAtual(); 
     }
@@ -349,89 +334,69 @@
         atualizarTela();
     }
 
-    function formatarData(dataISO) {
-        if (!dataISO) return '-'; const partes = dataISO.split('-'); return `${partes[2]}/${partes[1]}/${partes[0]}`;
-    }
-
     window.prepararEdicao = function(id) {
         const lancamento = bancoDeDados.find(item => item.id === id);
         if (!lancamento) return;
-        document.getElementById('desc').value = lancamento.desc; document.getElementById('tipo').value = lancamento.tipo;
-        
-        const event = new Event('change');
-        document.getElementById('tipo').dispatchEvent(event);
-        
+        document.getElementById('desc').value = lancamento.desc; 
+        document.getElementById('tipo').value = lancamento.tipo;
+        document.getElementById('tipo').dispatchEvent(new Event('change'));
         document.getElementById('status').value = lancamento.status;
-        document.getElementById('data').value = lancamento.data; document.getElementById('valor').value = lancamento.valor;
-        document.getElementById('box-repeticao').classList.add('hidden'); document.getElementById('box-parcelas').classList.add('hidden');
+        document.getElementById('data').value = lancamento.data; 
+        document.getElementById('valor').value = lancamento.valor;
+        document.getElementById('box-repeticao').classList.add('hidden'); 
+        document.getElementById('box-parcelas').classList.add('hidden');
         idEditando = id;
-        document.getElementById('titulo-formulario').innerText = "Editando Lançamento"; document.getElementById('titulo-formulario').classList.add('text-yellow-500');
-        document.getElementById('btn-salvar').innerText = "Atualizar Nuvem"; document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
+        document.getElementById('titulo-formulario').innerText = "Editando Lançamento"; 
+        document.getElementById('titulo-formulario').classList.add('text-yellow-500');
+        document.getElementById('btn-salvar').innerText = "Atualizar Nuvem"; 
+        document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     function cancelarEdicao() {
         idEditando = null;
         document.getElementById('box-repeticao').classList.remove('hidden');
-        document.getElementById('titulo-formulario').innerText = "Novo Lançamento"; document.getElementById('titulo-formulario').classList.remove('text-yellow-500');
-        document.getElementById('btn-salvar').innerText = "Salvar na Nuvem"; document.getElementById('btn-cancelar-edicao').classList.add('hidden');
+        document.getElementById('titulo-formulario').innerText = "Novo Lançamento"; 
+        document.getElementById('titulo-formulario').classList.remove('text-yellow-500');
+        document.getElementById('btn-salvar').innerText = "Salvar na Nuvem"; 
+        document.getElementById('btn-cancelar-edicao').classList.add('hidden');
         limparFormulario();
     }
 
     window.marcarConcluido = async function(id) {
         if(!auth.currentUser) return;
-        statusSync.innerText = '🟡 Atualizando Nuvem...';
-        statusSync.className = 'text-xs font-bold text-yellow-500';
-        try {
-            const lancamento = bancoDeDados.find(item => item.id === id);
-            if (lancamento) {
-                const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
-                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
-                await updateDoc(docRef, { status: novoStatus });
-            }
-        } catch (erro) {
-            statusSync.innerText = '🔴 Erro de Conexão';
-            statusSync.className = 'text-xs font-bold text-red-500';
-            alert(`Falha ao dar baixa: ${erro.message}`);
+        const lancamento = bancoDeDados.find(item => item.id === id);
+        if (lancamento) {
+            const novoStatus = lancamento.tipo === 'Pagar' ? 'Pago' : 'Recebido';
+            await updateDoc(doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id), { status: novoStatus });
         }
     };
 
     window.deletar = async function(id) {
         if (!auth.currentUser) return;
         if (confirm("Deseja excluir definitivamente da nuvem?")) {
-            statusSync.innerText = '🟡 Excluindo da Nuvem...';
-            statusSync.className = 'text-xs font-bold text-yellow-500';
-            try {
-                const docRef = doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id);
-                await deleteDoc(docRef);
-            } catch (erro) {
-                statusSync.innerText = '🔴 Erro de Conexão';
-                statusSync.className = 'text-xs font-bold text-red-500';
-                alert(`Falha ao apagar: ${erro.message}`);
-            }
+            await deleteDoc(doc(db, "usuarios", auth.currentUser.uid, "lancamentos", id));
         }
     };
 
     function limparFormulario() {
-        document.getElementById('desc').value = ''; document.getElementById('valor').value = '';
+        document.getElementById('desc').value = ''; 
+        document.getElementById('valor').value = '';
         document.getElementById('repeticao').value = 'unico'; 
-        const event = new Event('change');
-        document.getElementById('repeticao').dispatchEvent(event);
+        document.getElementById('repeticao').dispatchEvent(new Event('change'));
+    }
+
+    function formatarData(dataISO) {
+        if (!dataISO) return '-'; const partes = dataISO.split('-'); return `${partes[2]}/${partes[1]}/${partes[0]}`;
     }
 
     function atualizarTela() {
+        const fMes = document.getElementById('filtro-mes').value; 
+        const fAno = document.getElementById('filtro-ano').value;
         const corpoTabela = document.getElementById('tabela-corpo');
         corpoTabela.innerHTML = ''; 
 
-        const fMes = document.getElementById('filtro-mes').value; const fAno = document.getElementById('filtro-ano').value;
-        const controleMesAno = `${fMes}-${fAno}`;
-        document.getElementById('titulo-impressao').innerText = `- ${nomeMeses[fMes]} de ${fAno}`;
-
-        const dadosFiltrados = bancoDeDados.filter(conta => {
-            const anoConta = conta.data.substring(0, 4); const mesConta = conta.data.substring(5, 7);
-            return (anoConta === fAno && mesConta === fMes);
-        });
-
+        const dadosFiltrados = bancoDeDados.filter(conta => conta.data.substring(0, 4) === fAno && conta.data.substring(5, 7) === fMes);
         dadosFiltrados.sort((a, b) => new Date(a.data) - new Date(b.data));
 
         let totReceber = 0, totPagar = 0, totRecebido = 0, totPago = 0;
@@ -449,39 +414,34 @@
             if (conta.status === 'Pago') badgeClass = "bg-green-900/50 text-green-400 border-green-800"; 
             if (conta.status === 'Recebido') badgeClass = "bg-yellow-900/50 text-yellow-400 border-yellow-800"; 
 
-            let btnBaixa = '';
-            if (conta.status === 'Pendente') {
-                btnBaixa = `<button onclick="marcarConcluido('${conta.id}')" class="text-gray-400 hover:text-white px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors mr-1">✔ Baixa</button>`;
-            }
+            let btnBaixa = conta.status === 'Pendente' ? `<button onclick="marcarConcluido('${conta.id}')" class="text-gray-400 hover:text-white px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors mr-1">✔ Baixa</button>` : '';
 
-            const corZebrada = index % 2 === 0 ? "bg-gray-800/30" : "bg-transparent";
-
-            const tr = document.createElement('tr');
-            tr.className = `hover:bg-gray-750 transition-colors ${corZebrada}`;
-            tr.innerHTML = `
-                <td class="px-4 py-3 whitespace-nowrap text-gray-400">${formatarData(conta.data)}</td>
-                <td class="px-4 py-3 font-medium text-gray-200">${conta.desc}</td>
-                <td class="px-4 py-3 text-gray-400">${conta.tipo === 'Pagar' ? 'Saída' : 'Entrada'}</td>
-                <td class="px-4 py-3 text-gray-200">R$ ${conta.valor.toFixed(2).replace('.', ',')}</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 text-[10px] uppercase font-bold rounded border ${badgeClass}">${conta.status}</span></td>
-                <td class="px-4 py-3 text-right whitespace-nowrap print-ocultar">
-                    ${btnBaixa}
-                    <button onclick="prepararEdicao('${conta.id}')" class="text-blue-400 hover:text-blue-300 px-2 text-sm">Editar</button>
-                    <button onclick="deletar('${conta.id}')" class="text-red-400 hover:text-red-300 px-2 text-sm">Excluir</button>
-                </td>
-            `;
-            corpoTabela.appendChild(tr);
+            corpoTabela.innerHTML += `
+                <tr class="hover:bg-gray-750 transition-colors ${index % 2 === 0 ? "bg-gray-800/30" : "bg-transparent"}">
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-400">${formatarData(conta.data)}</td>
+                    <td class="px-4 py-3 font-medium text-gray-200">${conta.desc}</td>
+                    <td class="px-4 py-3 text-gray-400">${conta.tipo === 'Pagar' ? 'Saída' : 'Entrada'}</td>
+                    <td class="px-4 py-3 text-gray-200">R$ ${conta.valor.toFixed(2).replace('.', ',')}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 text-[10px] uppercase font-bold rounded border ${badgeClass}">${conta.status}</span></td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap print-ocultar">
+                        ${btnBaixa}
+                        <button onclick="prepararEdicao('${conta.id}')" class="text-blue-400 hover:text-blue-300 px-2 text-sm">Editar</button>
+                        <button onclick="deletar('${conta.id}')" class="text-red-400 hover:text-red-300 px-2 text-sm">Excluir</button>
+                    </td>
+                </tr>`;
         });
 
         if (dadosFiltrados.length === 0) corpoTabela.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhum lançamento encontrado neste mês.</td></tr>`;
 
         const painelSucesso = document.getElementById('painel-sucesso');
+        const controleMesAno = `${fMes}-${fAno}`;
         if (qtdeContasPagar > 0 && qtdeContasPagar === qtdeContasPagas) {
             painelSucesso.classList.remove('hidden');
             if (confeteJaDisparadoMeseAno !== controleMesAno) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); confeteJaDisparadoMeseAno = controleMesAno; }
         } else { painelSucesso.classList.add('hidden'); }
 
-        document.getElementById('dash-receber').innerText = `R$ ${totReceber.toFixed(2).replace('.', ',')}`; document.getElementById('dash-pagar').innerText = `R$ ${totPagar.toFixed(2).replace('.', ',')}`;
+        document.getElementById('dash-receber').innerText = `R$ ${totReceber.toFixed(2).replace('.', ',')}`; 
+        document.getElementById('dash-pagar').innerText = `R$ ${totPagar.toFixed(2).replace('.', ',')}`;
         document.getElementById('dash-recebido').innerText = `R$ ${totRecebido.toFixed(2).replace('.', ',')}`;
         const saldoFinal = totRecebido - totPago;
         const saldoElemento = document.getElementById('dash-saldo');
