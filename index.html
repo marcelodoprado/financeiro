@@ -73,8 +73,7 @@
                 <div class="flex items-center gap-2 mt-1 print-ocultar">
                     <p id="usuario-logado" class="text-xs text-blue-400"></p>
                     <span class="text-gray-600 text-xs">|</span>
-                    <!-- SEMÁFORO DE SINCRONIZAÇÃO -->
-                    <p id="status-sincronizacao" class="text-xs font-bold text-gray-500">Conectando Nuvem...</p>
+                    <p id="status-sincronizacao" class="text-xs font-bold text-yellow-500">Conectando Nuvem...</p>
                 </div>
             </div>
             <button id="btn-sair" class="text-xs uppercase bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800 px-3 py-1 rounded transition-colors print-ocultar">Sair</button>
@@ -106,38 +105,6 @@
         <div class="bg-gray-800 p-5 rounded-lg border border-gray-700"><h3 class="text-xs text-gray-400 uppercase mb-2">Saldo Mês</h3><p id="dash-saldo" class="text-xl font-bold text-white">R$ 0,00</p></div>
     </div>
 
-<!-- ADICIONADO -->
-    
-<import { getFirestore, doc, setDoc } from "firebase/firestore";
-<import { getAuth } from "firebase/auth";
-
-<async function salvarLancamento() {
-  const db = getFirestore();
-  const auth = getAuth();
-  const user = auth.currentUser;
-
-  if (!user) {
-    console.error("Erro: Nenhum usuário está logado!");
-    return;
-  }
-
-  // Caminho exato exigido pelas suas regras de segurança
-  <const caminho = doc(db, "usuarios", user.uid, "lancamentos", "teste_id");
-
-  try {
-    <console.log("Tentando salvar...");
-   <await setDoc(caminho, {
-      descricao: "Teste de Gravação",
-      valor: 50.00,
-      data: new Date()
-    });
-    <console.log("Sucesso ao gravar no Firestore!");
-  } catch (error) {
-    // Esse log vai revelar o erro real se a gravação falhar
-    <console.error("Erro capturado ao salvar no Firestore: ", error);
-  }
-}
-
     <!-- Formulário -->
     <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8 print-ocultar">
         <h2 id="titulo-formulario" class="text-lg font-medium text-white mb-4">Novo Lançamento</h2>
@@ -168,14 +135,14 @@
 
 </div>
 
-<!-- ======================================================= -->
-<!-- JAVASCRIPT: ARQUITETURA DE PRODUÇÃO FINAL (V1.0)        -->
-<!-- ======================================================= -->
+<!-- JAVASCRIPT: ARQUITETURA DE PRODUÇÃO FINAL (CDN CORE) -->
 <script type="module">
+    // A importação deve ser via CDN (links diretos) para funcionar sem Node.js/Webpack
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
+    // As chaves exatas do seu painel
     const firebaseConfig = {
       apiKey: "AIzaSyBDP0CWYnv4LdpVxMykHMPVx3fsyavF8kw",
       authDomain: "financeiro-cd95f.firebaseapp.com",
@@ -188,7 +155,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     
-    // A diretriz de resiliência permanente para garantir a conexão na sua rede
+    // Diretriz de estabilidade de rede (Essencial para não travar no seu 4G)
     const db = initializeFirestore(app, {
         experimentalForceLongPolling: true
     });
@@ -205,7 +172,7 @@
     const statusSync = document.getElementById('status-sincronizacao');
 
     // =======================================================
-    // SALVAMENTO PROFISSIONAL (SEM TIMEOUT FORÇADO)
+    // SALVAMENTO PROFISSIONAL
     // =======================================================
     document.getElementById('btn-salvar').addEventListener('click', async () => {
         if(!colLancamentos) { 
@@ -278,9 +245,7 @@
         else document.getElementById('box-parcelas').classList.add('hidden');
     });
 
-    // =======================================================
     // SISTEMA DE LOGIN E REGISTRO
-    // =======================================================
     let modoRegistro = false;
     document.getElementById('btn-alternar-registro').addEventListener('click', () => {
         modoRegistro = !modoRegistro;
@@ -339,9 +304,7 @@
         else msgErro.innerText = "Ocorreu um erro. Tente novamente.";
     }
 
-    // =======================================================
     // CONEXÃO DE VIGIA (TEMPO REAL)
-    // =======================================================
     function iniciarEscutaDoBanco() {
         if(unsubscribeSnapshot) unsubscribeSnapshot();
         
@@ -363,9 +326,7 @@
         });
     }
 
-    // =======================================================
     // LÓGICA DE INTERFACE E TABELA
-    // =======================================================
     const nomeMeses = { "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril", "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto", "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro" };
 
     function configurarFiltrosIniciais() {
